@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net
+    match /{document=**} { 
+      allow read, write: if false; 
+    }
+
+    // --- Helpers ---
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isAdmin() { 
+      return request.auth != null && 
+             request.auth.token.email == "sanajidul.muhsinin.tamim@gmail.com";
+    }
+    
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'brand', 'category', 'description', 'regularPrice', 'salePrice', 'availability', 'imageUrl', 'createdAt']) &&
+             data.name is string &&
+             data.brand is string &&
+             data.category is string &&
+             data.description is string &&
+             data.regularPrice is number &&
+             data.salePrice is number &&
+             data.availability is string &&
+             data.imageUrl is string &&
+             data.createdAt is number;
+    }
+
+    function isValidOfflineSale(data) {
+      return data.keys().hasAll(['brand', 'itemName', 'unit', 'qty', 'unitPrice', 'total', 'timestamp']) &&
+             data.brand is string &&
+             data.itemName is string &&
+             data.unit is string &&
+             data.qty is number &&
+             data.unitPrice is number &&
+             data.total is number &&
+             data.timestamp is number;
+    }
+
+    function isValidOnlineOrder(data) {
+      return data.keys().hasAll(['items', 'total', 'status', 'gateway', 'customerName', 'phone', 'timestamp']) &&
+             data.keys().size() == 7 &&
+             data.items is list && data.items.size() <= 50 &&
+             data.total is number &&
+             data.status is string && data.status.size() <= 50 &&
+             data.gateway is string && data.gateway.size() <= 50 &&
+             data.customerName is string && data.customerName.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.timestamp is number;
+    }
+
+    // --- Rules ---
+    match /products/{productId} {
+      allow read: if true; // Public catalog
+      allow create: if isAdmin() && isValidProduct(incoming());
+      allow update: if isAdmin() && isValidProduct(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /offlineSales/{saleId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidOfflineSale(incoming());
+      allow update: if isAdmin() && isValidOfflineSale(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /onlineOrders/{orderId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if isValidOnlineOrder(incoming());
+    }
+    match /storeSettings/{settingId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+  }
+}

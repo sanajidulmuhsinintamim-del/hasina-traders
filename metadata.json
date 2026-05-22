@@ -1,0 +1,8 @@
+{
+  "name": "M/S Hasina Traders",
+  "description": "E-Commerce Website and Offline POS System for Building Materials & Sanitary Store",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

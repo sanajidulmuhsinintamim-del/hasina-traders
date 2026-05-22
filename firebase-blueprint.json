@@ -1,0 +1,65 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "An item in the store",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "brand": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "regularPrice": { "type": "number" },
+        "salePrice": { "type": "number" },
+        "availability": { "type": "string", "enum": ["In Stock", "Pre Order", "Upcoming"] },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "brand", "category", "regularPrice", "salePrice", "availability", "imageUrl", "createdAt"]
+    },
+    "OfflineSale": {
+      "title": "Offline Sale",
+      "description": "A POS transaction",
+      "type": "object",
+      "properties": {
+        "brand": { "type": "string" },
+        "itemName": { "type": "string" },
+        "unit": { "type": "string" },
+        "qty": { "type": "number" },
+        "unitPrice": { "type": "number" },
+        "total": { "type": "number" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["brand", "itemName", "unit", "qty", "unitPrice", "total", "timestamp"]
+    },
+    "OnlineOrder": {
+      "title": "Online Order",
+      "description": "An order placed online",
+      "type": "object",
+      "properties": {
+        "items": { "type": "array" },
+        "total": { "type": "number" },
+        "status": { "type": "string" },
+        "gateway": { "type": "string" },
+        "customerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["items", "total", "status", "gateway", "customerName", "phone", "timestamp"]
+    }
+  },
+  "firestore": {
+    "products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Store products"
+    },
+    "offlineSales/{saleId}": {
+      "schema": { "$ref": "#/entities/OfflineSale" },
+      "description": "Offline POS transactions"
+    },
+    "onlineOrders/{orderId}": {
+      "schema": { "$ref": "#/entities/OnlineOrder" },
+      "description": "Online customer orders"
+    }
+  }
+}
