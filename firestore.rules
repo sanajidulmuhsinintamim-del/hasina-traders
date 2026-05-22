@@ -39,15 +39,13 @@ service cloud.firestore {
     }
 
     function isValidOnlineOrder(data) {
-      return data.keys().hasAll(['items', 'total', 'status', 'gateway', 'customerName', 'phone', 'timestamp']) &&
-             data.keys().size() == 7 &&
-             data.items is list && data.items.size() <= 50 &&
+      return data.keys().hasAll(['customerInfo', 'items', 'subtotal', 'deliveryCharge', 'total', 'status', 'createdAt']) &&
+             data.items is list && data.items.size() <= 100 &&
+             data.subtotal is number &&
+             data.deliveryCharge is number &&
              data.total is number &&
              data.status is string && data.status.size() <= 50 &&
-             data.gateway is string && data.gateway.size() <= 50 &&
-             data.customerName is string && data.customerName.size() <= 100 &&
-             data.phone is string && data.phone.size() <= 20 &&
-             data.timestamp is number;
+             data.createdAt is number;
     }
 
     // --- Rules ---

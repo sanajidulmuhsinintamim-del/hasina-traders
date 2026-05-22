@@ -27,13 +27,24 @@ export interface CartItem {
   quantity: number;
 }
 
-export interface OnlineOrder {
-  id: string;
-  items: CartItem[];
-  total: number;
-  status: 'Pending' | 'Completed';
-  timestamp: number;
-  gateway: string;
-  customerName: string;
+export interface OrderCustomerInfo {
+  name: string;
   phone: string;
+  altPhone?: string;
+  address: string;
+  district: string;
+  thana: string;
+  notes?: string;
+  paymentMethod: string;
+}
+
+export interface Order {
+  id: string;
+  customerInfo: OrderCustomerInfo;
+  items: CartItem[];
+  subtotal: number;
+  deliveryCharge: number;
+  total: number;
+  status: 'Pending' | 'Confirmed' | 'Processing' | 'Ready to Ship' | 'Shipped' | 'Delivered' | 'Cancelled';
+  createdAt: number;
 }

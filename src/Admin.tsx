@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from './StoreProvider';
-import { LogOut, Package, Database, BarChart3, Plus, Tags, Trash2, Calendar, TrendingUp, Edit } from 'lucide-react';
-import { OfflineSale, Product } from './types';
+import { LogOut, Package, Database, BarChart3, Plus, Tags, Trash2, Calendar, TrendingUp, Edit, Printer, ShoppingBag, Download } from 'lucide-react';
+import { OfflineSale, Product, Order } from './types';
 import { loginWithGoogle, logoutUser } from './firebase';
 
 export const AdminLogin = ({ onOpenStore }: { onOpenStore: () => void }) => {
@@ -38,13 +38,31 @@ export const AdminLogin = ({ onOpenStore }: { onOpenStore: () => void }) => {
 };
 
 export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
-  const [activeTab, setActiveTab] = useState<'POS' | 'PRODUCTS' | 'BRANDS' | 'STATS'>('POS');
+  const [activeTab, setActiveTab] = useState<'POS' | 'ORDERS' | 'PRODUCTS' | 'BRANDS' | 'STATS'>('POS');
+  const [printData, setPrintData] = useState<{ type: 'offline', data: OfflineSale } | { type: 'online', data: Order | Order[] } | null>(null);
+
+  const handleDownloadPDF = async () => {
+    if (!printData) return;
+    
+    // Natively trigger print. Browser print dialog defaults to "Save as PDF".
+    // We temporally change document title so the saved PDF has a nice name.
+    const oldTitle = document.title;
+    const fileName = `Hasina_Traders_Invoice_${printData.type === 'offline' ? (printData.data as OfflineSale).id : (Array.isArray(printData.data) ? printData.data[0].id : (printData.data as Order).id)}`;
+    document.title = fileName;
+    
+    window.print();
+    
+    setTimeout(() => {
+      document.title = oldTitle;
+    }, 1000);
+  };
 
   const navItems = [
-    { id: 'POS', label: 'Offline POS Ledger', icon: Database },
-    { id: 'PRODUCTS', label: 'Online DB Management', icon: Package },
+    { id: 'POS', label: 'Offline POS', icon: Database },
+    { id: 'ORDERS', label: 'Online Orders', icon: ShoppingBag },
+    { id: 'PRODUCTS', label: 'DB Management', icon: Package },
     { id: 'BRANDS', label: 'Brand Registry', icon: Tags },
-    { id: 'STATS', label: 'Unified Analytics', icon: BarChart3 }
+    { id: 'STATS', label: 'Analytics', icon: BarChart3 }
   ] as const;
 
   return (
@@ -80,17 +98,151 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6">
-        {activeTab === 'POS' && <OffilePOS />}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-6 print:hidden">
+        {printData && (
+           <div className="bg-indigo-50 text-indigo-900 p-4 rounded-lg mb-6 flex justify-between items-center shadow-md border border-indigo-200 animate-in fade-in slide-in-from-top-4">
+              <div>
+                <p className="font-bold flex items-center gap-2"><Printer size={18}/> PDF / Print Preview Active</p>
+                <p className="text-sm">Invoice is previewed below. You can save as PDF or print.</p>
+              </div>
+              <div className="flex gap-3">
+                 <button onClick={() => window.print()} className="bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-700 px-4 py-2 rounded text-sm font-bold shadow-sm transition-colors">
+                    <Printer size={16} className="inline mr-1" /> Print 
+                 </button>
+                 <button onClick={handleDownloadPDF} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm font-bold shadow-sm transition-colors">
+                    <Download size={16} className="inline mr-1" /> Download PDF
+                 </button>
+                 <button onClick={() => setPrintData(null)} className="ml-4 text-indigo-600 hover:text-indigo-900 border-b border-transparent hover:border-indigo-600 text-sm font-bold transition-colors">
+                    Close Preview
+                 </button>
+              </div>
+           </div>
+        )}
+        {activeTab === 'POS' && <OffilePOS onPrint={(sale) => setPrintData({ type: 'offline', data: sale })} />}
+        {activeTab === 'ORDERS' && <OnlineOrders onPrint={(order) => setPrintData({ type: 'online', data: order })} />}
         {activeTab === 'PRODUCTS' && <ProductManager />}
         {activeTab === 'BRANDS' && <BrandManager />}
         {activeTab === 'STATS' && <Statistics />}
       </main>
+
+      {/* PRINTABLE INVOICE TEMPLATE (Hidden from screen, displayed on print) */}
+      {printData && (
+        <div id="printable-invoice" className="w-full max-w-3xl mx-auto p-4 bg-white text-black font-sans leading-relaxed border my-8 shadow-xl">
+          <div className="text-center mb-6 pb-4 border-b-2 border-gray-800">
+            <h1 className="text-2xl font-bold bg-gray-100 py-1 mb-3 rounded-md border border-gray-300 w-1/3 mx-auto uppercase tracking-widest">CASH MEMO</h1>
+            <h2 className="text-4xl font-black mb-1">মেসার্স হাসিনা ট্রেডার্স</h2>
+            <p className="text-xl font-bold tracking-wide">M/S Hasina Traders</p>
+            <p className="text-md mt-2 font-medium">Proprietor: Babul Matubbar</p>
+            <p className="text-sm text-gray-700">Location: Batikamari Bazar</p>
+            <p className="text-sm font-semibold mt-1">Hotline: +880-1988030534, +880-1996418168</p>
+            <p className="text-sm font-semibold">Email: tradersmshasina@gmail.com</p>
+          </div>
+
+          <div className="flex justify-between mb-4">
+            <div>
+              <p><strong>Invoice No:</strong> {
+                printData.type === 'offline' 
+                  ? `OFF-${String((printData.data as OfflineSale).timestamp).slice(-6)}` 
+                  : (Array.isArray(printData.data) 
+                      ? `ONL-GRP-${(printData.data[0] as Order).id.slice(0, 6).toUpperCase()}` 
+                      : `ONL-${(printData.data as Order).id.slice(0, 6).toUpperCase()}`)
+              }</p>
+            </div>
+            <div className="text-right">
+              <p><strong>Date:</strong> {new Date(printData.type === 'offline' ? (printData.data as OfflineSale).timestamp : (Array.isArray(printData.data) ? printData.data[0].createdAt : (printData.data as Order).createdAt)).toLocaleDateString()}</p>
+              <p><strong>Time:</strong> {new Date(printData.type === 'offline' ? (printData.data as OfflineSale).timestamp : (Array.isArray(printData.data) ? printData.data[0].createdAt : (printData.data as Order).createdAt)).toLocaleTimeString()}</p>
+            </div>
+          </div>
+          
+          {printData.type === 'online' && (
+            <div className="mb-4 bg-gray-50 border border-gray-200 p-3">
+              <p className="font-bold text-sm uppercase mb-1 border-b pb-1">Customer Information (Online Order)</p>
+              <p className="text-sm"><strong>Name:</strong> {(Array.isArray(printData.data) ? printData.data[0] : (printData.data as Order)).customerInfo?.name || ((Array.isArray(printData.data) ? printData.data[0] : printData.data) as any).customerName || 'Unknown'}</p>
+              <p className="text-sm"><strong>Phone:</strong> {(Array.isArray(printData.data) ? printData.data[0] : (printData.data as Order)).customerInfo?.phone || ((Array.isArray(printData.data) ? printData.data[0] : printData.data) as any).phone || 'N/A'}</p>
+              <p className="text-sm"><strong>Address:</strong> {(Array.isArray(printData.data) ? printData.data[0] : (printData.data as Order)).customerInfo?.address || 'No Address Provided'}</p>
+              <p className="text-sm"><strong>Payment:</strong> {((Array.isArray(printData.data) ? printData.data[0] : (printData.data as Order)).customerInfo?.paymentMethod || ((Array.isArray(printData.data) ? printData.data[0] : printData.data) as any).gateway || 'N/A').toUpperCase()}</p>
+            </div>
+          )}
+
+          <table className="w-full text-left border-collapse border border-gray-800 mb-6">
+            <thead>
+              <tr className="bg-gray-100 uppercase text-xs font-bold tracking-wider">
+                <th className="border border-gray-800 px-3 py-2 text-center w-12">No.</th>
+                <th className="border border-gray-800 px-3 py-2 text-center">Description</th>
+                <th className="border border-gray-800 px-3 py-2 text-center w-24">Qty</th>
+                <th className="border border-gray-800 px-3 py-2 text-center w-28">Rate (৳)</th>
+                <th className="border border-gray-800 px-3 py-2 text-right w-32">Total (৳)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {printData.type === 'offline' && (
+                <tr>
+                  <td className="border border-gray-800 px-3 py-2 text-center">1</td>
+                  <td className="border border-gray-800 px-3 py-2">
+                    <span className="font-bold opacity-75">{(printData.data as OfflineSale).brand}</span> - {(printData.data as OfflineSale).itemName}
+                  </td>
+                  <td className="border border-gray-800 px-3 py-2 text-center">{(printData.data as OfflineSale).qty} {(printData.data as OfflineSale).unit}</td>
+                  <td className="border border-gray-800 px-3 py-2 text-center">{(printData.data as OfflineSale).unitPrice.toLocaleString()}</td>
+                  <td className="border border-gray-800 px-3 py-2 text-right font-bold">{(printData.data as OfflineSale).total.toLocaleString()}</td>
+                </tr>
+              )}
+              {printData.type === 'online' && (Array.isArray(printData.data) ? printData.data.flatMap(o => o.items) : (printData.data as Order).items).map((item, idx) => {
+                const name = item.product?.name || (item as any).name || 'Unknown Item';
+                const qty = item.quantity || (item as any).cartQty || 1;
+                const price = item.product?.salePrice || (item as any).salePrice || 0;
+                return (
+                  <tr key={item.product?.id || (item as any).id || idx}>
+                    <td className="border border-gray-800 px-3 py-2 text-center">{idx + 1}</td>
+                    <td className="border border-gray-800 px-3 py-2">{name}</td>
+                    <td className="border border-gray-800 px-3 py-2 text-center">{qty} pcs</td>
+                    <td className="border border-gray-800 px-3 py-2 text-center">{price.toLocaleString()}</td>
+                    <td className="border border-gray-800 px-3 py-2 text-right font-bold">{(price * qty).toLocaleString()}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          <div className="flex justify-end">
+            <div className="w-1/2 border border-gray-800 p-3 bg-gray-50 text-sm">
+              <div className="flex justify-between mb-1 pb-1 border-b border-gray-300">
+                <span>Subtotal:</span>
+                <span>৳{(printData.type === 'online' ? (Array.isArray(printData.data) ? printData.data.reduce((acc, o) => acc + (o.subtotal || (o as any).total), 0) : ((printData.data as Order).subtotal || (printData.data as any).total)) : (printData.data as OfflineSale).total).toLocaleString()}</span>
+              </div>
+              {printData.type === 'online' && (
+                <div className="flex justify-between mb-1 pb-1 border-b border-gray-300">
+                  <span>Delivery Charge:</span>
+                  <span>৳{(Array.isArray(printData.data) ? printData.data.reduce((acc, o) => acc + (o.deliveryCharge || 0), 0) : ((printData.data as Order).deliveryCharge || 0)).toLocaleString()}</span>
+                </div>
+              )}
+              {printData.type === 'offline' && (
+                <div className="flex justify-between mb-1 pb-1 border-b border-gray-300">
+                  <span>Discount:</span>
+                  <span>৳0</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-lg pt-1">
+                <span>Grand Total:</span>
+                <span>৳{(printData.type === 'online' ? (Array.isArray(printData.data) ? printData.data.reduce((acc, o) => acc + (o.total || 0), 0) : (printData.data as Order).total) : (printData.data as OfflineSale).total).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-20 flex justify-between text-sm">
+            <div className="border-t border-gray-800 pt-1 w-40 text-center"><p>Customer Signature</p></div>
+            <div className="border-t border-gray-800 pt-1 w-40 text-center"><p>Authorized Signature</p></div>
+          </div>
+          
+          <div className="mt-8 text-center text-xs text-gray-500 uppercase tracking-widest border-t border-gray-300 pt-2">
+            ** Thank you for choosing M/S Hasina Traders **
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-const OffilePOS = () => {
+const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
   const { brands, addOfflineSale, offlineSales } = useStore();
   const [brand, setBrand] = useState(brands[0] || '');
   const [itemName, setItemName] = useState('');
@@ -131,8 +283,8 @@ const OffilePOS = () => {
               <th className="px-6 py-3">Time</th>
               <th className="px-6 py-3">Brand & Item</th>
               <th className="px-6 py-3">Qty</th>
-              <th className="px-6 py-3">Unit Price</th>
-              <th className="px-6 py-3 font-bold">Total</th>
+              <th className="px-6 py-3">Total</th>
+              <th className="px-6 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -141,8 +293,12 @@ const OffilePOS = () => {
                 <td className="px-6 py-3 whitespace-nowrap text-gray-500">{formatTime(s.timestamp)}</td>
                 <td className="px-6 py-3 text-gray-800"><span className="font-semibold text-[#081621]">{s.brand}</span> - {s.itemName}</td>
                 <td className="px-6 py-3 font-mono">{s.qty} {s.unit}</td>
-                <td className="px-6 py-3 font-mono">৳{s.unitPrice.toLocaleString()}</td>
                 <td className="px-6 py-3 font-mono font-semibold text-[#ef4a23]">৳{s.total.toLocaleString()}</td>
+                <td className="px-6 py-3 text-right">
+                  <button onClick={() => onPrint(s)} className="text-gray-500 hover:text-blue-600 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm text-xs font-semibold flex items-center gap-1 ml-auto">
+                    <Printer size={12}/> Print
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -204,6 +360,141 @@ const OffilePOS = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
          <SalesTable sales={todaySales} title="Today's Sales Box" accent="border-[#ef4a23]" />
          <SalesTable sales={yesterdaySales} title={`Yesterday's Sales Box (${formatDate(todayStart - 86400000)})`} accent="border-gray-400" />
+      </div>
+    </div>
+  );
+};
+
+const OnlineOrders = ({ onPrint }: { onPrint: (order: Order | Order[]) => void }) => {
+  const { onlineOrders, updateOrderStatus } = useStore();
+  const [activeFilter, setActiveFilter] = useState<'All' | Order['status']>('All');
+  const [showNotification, setShowNotification] = useState('');
+
+  const handleStatusChange = async (orderId: string, currentStatus: Order['status'], newStatus: Order['status'], phone: string) => {
+    if (currentStatus === newStatus) return;
+    const confirmChange = window.confirm(`Change order status to ${newStatus}?`);
+    if (!confirmChange) return;
+
+    await updateOrderStatus(orderId, newStatus);
+    
+    // Simulate SMS Notification
+    setShowNotification(`SMS Sent to ${phone}: "Your Hasina Traders Order is now ${newStatus}"`);
+    setTimeout(() => setShowNotification(''), 5000);
+  };
+
+  const filteredOrders = activeFilter === 'All' ? onlineOrders : onlineOrders.filter(o => o.status === activeFilter);
+
+  const ordersByPhone = useMemo(() => {
+    return filteredOrders.reduce((acc, order) => {
+      const phone = order.customerInfo?.phone || (order as any).phone || 'UnknownPhone';
+      if (!acc[phone]) acc[phone] = [];
+      acc[phone].push(order);
+      return acc;
+    }, {} as Record<string, Order[]>);
+  }, [filteredOrders]);
+
+  const statuses: Order['status'][] = ['Pending', 'Processing', 'Ready to Ship', 'Shipped', 'Delivered', 'Cancelled'];
+
+  return (
+    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
+      
+      {showNotification && (
+        <div className="fixed top-20 right-10 bg-[#081621] text-white px-6 py-4 rounded shadow-2xl z-50 flex items-center gap-3 animate-in fade-in slide-in-from-right border-l-4 border-green-500">
+          <span className="text-xl">📩</span>
+          <span className="font-medium text-sm leading-snug">{showNotification}</span>
+        </div>
+      )}
+
+      {/* Analytics & Filters */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+         {['All', 'Pending', 'Processing', 'Delivered'].map(status => (
+           <button 
+              key={status} 
+              onClick={() => setActiveFilter(status as any)}
+              className={`p-4 rounded-lg border text-left flex flex-col justify-between h-24 transition-colors ${activeFilter === status ? 'bg-[#ef4a23] text-white border-transparent shadow-md' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 shadow-sm'}`}
+           >
+              <h3 className={`text-xs font-bold uppercase tracking-wider ${activeFilter === status ? 'text-white/80' : 'text-gray-400'}`}>{status} Orders</h3>
+              <p className="text-2xl font-black">{status === 'All' ? onlineOrders.length : onlineOrders.filter(o => o.status === status).length}</p>
+           </button>
+         ))}
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+          <h2 className="font-bold text-gray-800 flex items-center gap-2"><ShoppingBag size={18} className="text-[#ef4a23]"/> Customer Online Orders ({filteredOrders.length})</h2>
+        </div>
+        {filteredOrders.length === 0 ? <p className="p-8 text-center text-gray-500">No orders found for this criteria.</p> : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-[#081621] text-white/90 text-xs uppercase whitespace-nowrap">
+                <tr>
+                  <th className="px-6 py-3">Order Date</th>
+                  <th className="px-6 py-3">Customer Info</th>
+                  <th className="px-6 py-3">Payment</th>
+                  <th className="px-6 py-3">Total Amount</th>
+                  <th className="px-6 py-3">Status Pipeline</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {Object.entries(ordersByPhone).map(([phone, groupOrders]: [string, any]) => (
+                  <React.Fragment key={phone}>
+                    {groupOrders.length > 0 && (
+                      <tr className="bg-indigo-50/50 border-t border-indigo-100">
+                        <td colSpan={5} className="px-6 py-2 text-xs font-bold text-indigo-800 tracking-widest uppercase">
+                           👥 Customer Group: {groupOrders[0].customerInfo?.name || (groupOrders[0] as any).customerName || 'Unknown'} (Phone: {phone}) &mdash; {groupOrders.length} Orders
+                        </td>
+                        <td className="px-6 py-2 text-right">
+                           <button onClick={() => onPrint(groupOrders)} className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3 py-1 rounded shadow-sm flex items-center gap-1 ml-auto transition-colors">
+                              <Printer size={12}/> Print All ({groupOrders.length})
+                           </button>
+                        </td>
+                      </tr>
+                    )}
+                    {groupOrders.map(order => (
+                      <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
+                           <span className="font-bold text-gray-800">{new Date(order.createdAt || (order as any).timestamp).toLocaleDateString()}</span>
+                           <br/>
+                           <span className="text-xs">{new Date(order.createdAt || (order as any).timestamp).toLocaleTimeString()}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                           <div className="font-bold text-gray-900">{order.customerInfo?.name || (order as any).customerName || 'Unknown'}</div>
+                           <div className="text-xs text-gray-600 mt-1">{order.customerInfo?.phone || (order as any).phone || 'N/A'}</div>
+                           <div className="text-[10px] text-gray-400 mt-1 uppercase max-w-[150px] truncate" title={order.customerInfo?.address || ''}>{order.customerInfo?.address || 'No Address Provided'}</div>
+                        </td>
+                        <td className="px-6 py-4 font-semibold text-[#081621] uppercase text-xs">
+                          <span className="bg-gray-100 px-2 py-1 rounded border border-gray-200">{order.customerInfo?.paymentMethod || (order as any).gateway || 'N/A'}</span>
+                        </td>
+                        <td className="px-6 py-4 font-mono font-bold text-[#ef4a23]">৳{order.total.toLocaleString()}</td>
+                        <td className="px-6 py-4">
+                           <select 
+                             value={order.status}
+                             onChange={(e) => handleStatusChange(order.id, order.status, e.target.value as Order['status'], order.customerInfo?.phone || (order as any).phone || 'N/A')}
+                             className={`text-xs font-bold px-2 py-1.5 rounded border focus:ring-1 outline-none appearance-none cursor-pointer ${
+                                order.status === 'Pending' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                                order.status === 'Processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                order.status === 'Delivered' ? 'bg-green-50 text-green-700 border-green-200' :
+                                order.status === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-200' :
+                                'bg-gray-50 text-gray-700 border-gray-200'
+                             }`}
+                           >
+                             {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+                           </select>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button onClick={() => onPrint(order)} className="text-[#081621] hover:text-[#ef4a23] bg-white border border-gray-200 px-3 py-1.5 rounded shadow-sm text-xs font-bold flex items-center gap-1 ml-auto transition-colors group">
+                            <Printer size={14} className="group-hover:-translate-y-0.5 transition-transform"/> View PDF
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -469,7 +760,7 @@ const Statistics = () => {
             <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Item Breakdown (Today)</h4>
             <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
                {Object.entries(offlineBreakdown).length === 0 ? <p className="text-sm text-gray-400 italic">No sales yet.</p> : (
-                 Object.entries(offlineBreakdown).map(([name, data]) => (
+                 Object.entries(offlineBreakdown).map(([name, data]: [string, any]) => (
                    <div key={name} className="flex justify-between items-center text-sm p-3 bg-gray-50 rounded border border-gray-100">
                      <span className="font-medium text-gray-800 w-2/3 truncate">{name}</span>
                      <span className="font-mono text-gray-500">{data.qty} {data.unit}</span>

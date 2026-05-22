@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Product, OfflineSale, OnlineOrder } from './types';
+import { Product, OfflineSale, Order } from './types';
 import { DEFAULT_BRANDS, DEFAULT_CATEGORIES, INITIAL_PRODUCTS } from './data';
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -12,7 +12,7 @@ interface AppState {
   categories: string[];
   products: Product[];
   offlineSales: OfflineSale[];
-  onlineOrders: OnlineOrder[];
+  onlineOrders: Order[];
   isLoaded: boolean;
 }
 
@@ -23,7 +23,8 @@ interface AppContextType extends AppState {
   updateProduct: (id: string, product: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
   addOfflineSale: (sale: Omit<OfflineSale, 'id' | 'timestamp'>) => void;
-  addOnlineOrder: (order: Omit<OnlineOrder, 'id' | 'timestamp'>) => void;
+  addOnlineOrder: (order: Omit<Order, 'id' | 'createdAt'>) => void;
+  updateOrderStatus: (id: string, status: Order['status']) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -88,8 +89,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'offlineSales'));
 
       const unsubOrders = onSnapshot(collection(db, 'onlineOrders'), (snapshot) => {
-        const orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as OnlineOrder));
-        setState(s => ({ ...s, onlineOrders: orders.sort((a,b) => b.timestamp - a.timestamp) }));
+        const orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Order));
+        setState(s => ({ ...s, onlineOrders: orders.sort((a,b) => b.createdAt - a.createdAt) }));
       }, (err) => handleFirestoreError(err, OperationType.LIST, 'onlineOrders'));
 
       return () => {
@@ -147,11 +148,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch(e) { handleFirestoreError(e, OperationType.WRITE, `offlineSales/${id}`); }
   };
 
-  const addOnlineOrder = async (order: Omit<OnlineOrder, 'id' | 'timestamp'>) => {
-    const id = `order-${Date.now()}`;
+  const addOnlineOrder = async (order: Omit<Order, 'id' | 'createdAt'>) => {
+    const id = `HT-2026-${Math.floor(10000 + Math.random() * 90000)}`;
     try {
-      await setDoc(doc(db, 'onlineOrders', id), { ...order, timestamp: Date.now() });
+      await setDoc(doc(db, 'onlineOrders', id), { ...order, createdAt: Date.now() });
     } catch(e) { handleFirestoreError(e, OperationType.WRITE, `onlineOrders/${id}`); }
+  };
+
+  const updateOrderStatus = async (id: string, status: Order['status']) => {
+    try {
+      await updateDoc(doc(db, 'onlineOrders', id), { status });
+    } catch(e) { handleFirestoreError(e, OperationType.UPDATE, `onlineOrders/${id}`); }
   };
 
   return (
@@ -163,7 +170,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updateProduct,
       deleteProduct,
       addOfflineSale,
-      addOnlineOrder
+      addOnlineOrder,
+      updateOrderStatus
     }}>
       {children}
     </AppContext.Provider>
