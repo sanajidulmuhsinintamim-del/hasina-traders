@@ -11,19 +11,28 @@ export interface Product {
   createdAt: number;
 }
 
+export interface OfflineSaleItem {
+  productId: string;
+  name: string;
+  brand: string;
+  qty: number;
+  unit: string;
+  unitPrice: number;
+  total: number;
+}
+
 export interface OfflineSale {
   id: string;
-  brand: string;
-  itemName: string;
-  unit: string;
-  qty: number;
-  unitPrice: number;
+  items: OfflineSaleItem[];
+  subtotal: number;
+  discount: number;
+  discountCode?: string;
   total: number;
   timestamp: number;
   customerName?: string;
   customerPhone?: string;
-  customerLocation?: string;
-  deliveryHand?: string;
+  customerLocation: string;
+  deliveryHand: string;
 }
 
 export interface CartItem {
@@ -34,7 +43,6 @@ export interface CartItem {
 export interface OrderCustomerInfo {
   name: string;
   phone: string;
-  altPhone?: string;
   address: string;
   district: string;
   thana: string;

@@ -28,14 +28,17 @@ service cloud.firestore {
     }
 
     function isValidOfflineSale(data) {
-      return data.keys().hasAll(['brand', 'itemName', 'unit', 'qty', 'unitPrice', 'total', 'timestamp']) &&
-             data.brand is string &&
-             data.itemName is string &&
-             data.unit is string &&
-             data.qty is number &&
-             data.unitPrice is number &&
+      return data.keys().hasAll(['items', 'subtotal', 'discount', 'total', 'timestamp', 'customerLocation', 'deliveryHand']) &&
+             data.items is list &&
+             data.subtotal is number &&
+             data.discount is number &&
              data.total is number &&
-             data.timestamp is number;
+             data.timestamp is number &&
+             data.customerLocation is string &&
+             data.deliveryHand is string &&
+             (!data.keys().hasAny(['customerName']) || data.customerName is string) &&
+             (!data.keys().hasAny(['customerPhone']) || data.customerPhone is string) &&
+             (!data.keys().hasAny(['discountCode']) || data.discountCode is string);
     }
 
     function isValidOnlineOrder(data) {

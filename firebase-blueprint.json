@@ -22,15 +22,18 @@
       "description": "A POS transaction",
       "type": "object",
       "properties": {
-        "brand": { "type": "string" },
-        "itemName": { "type": "string" },
-        "unit": { "type": "string" },
-        "qty": { "type": "number" },
-        "unitPrice": { "type": "number" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "discount": { "type": "number" },
+        "discountCode": { "type": "string" },
         "total": { "type": "number" },
-        "timestamp": { "type": "number" }
+        "timestamp": { "type": "number" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerLocation": { "type": "string" },
+        "deliveryHand": { "type": "string" }
       },
-      "required": ["brand", "itemName", "unit", "qty", "unitPrice", "total", "timestamp"]
+      "required": ["items", "subtotal", "discount", "total", "timestamp", "customerLocation", "deliveryHand"]
     },
     "OnlineOrder": {
       "title": "Online Order",

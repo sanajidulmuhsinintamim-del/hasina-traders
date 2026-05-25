@@ -40,163 +40,226 @@ export const AdminLogin = ({ onOpenStore }: { onOpenStore: () => void }) => {
 };
 
 export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
+  const { offlineSales, onlineOrders } = useStore();
   const [activeTab, setActiveTab] = useState<'POS' | 'ORDERS' | 'PRODUCTS' | 'BRANDS' | 'STATS' | 'QA_MODERATION'>('POS');
   const [printData, setPrintData] = useState<{ type: 'offline', data: OfflineSale } | { type: 'online', data: Order | Order[] } | null>(null);
 
   const handleDownloadPDF = async () => {
     if (!printData) return;
     
-    // Programmatic high-quality vector jsPDF generator
-    const doc = new jsPDF() as any;
+    // Standard portrait A4 specifications
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    }) as any;
     
-    // Draw Border Accent Box
-    doc.rect(5, 5, 200, 287, 'S');
+    let entityTitle = "";
+    let invoiceId = "";
+    let invoiceDate = "";
+    let customerName = "Walk-in Partner";
+    let customerPhone = "N/A";
+    let customerLocation = "N/A";
+    let deliveryHand = "N/A";
+    let couponDeduct = 0;
+    let couponCodeUsed = "";
+    let orderNotes = "";
 
-    // M/S Hasina Traders Business Header
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(8, 22, 33);
-    doc.text("M/S HASINA TRADERS", 105, 20, { align: "center" });
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
-    doc.text("Proprietor: Babul Matubbar | Hotline: +880-1988030534", 105, 26, { align: "center" });
-    doc.text("Location: Batikamari Bazar, Gopalganj, Bangladesh", 105, 31, { align: "center" });
-    
-    // Separation lines with color codes
-    doc.setDrawColor(239, 74, 35);
-    doc.setLineWidth(0.8);
-    doc.line(10, 36, 200, 36);
-
-    // Metadata details
-    doc.setFontSize(10);
-    doc.setTextColor(50, 50, 50);
-    
     if (printData.type === 'offline') {
       const sale = printData.data as OfflineSale;
-      
-      doc.setFont("helvetica", "bold");
-      doc.text("OFFLINE POS CASH MEMO", 10, 44);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Invoice ID: OFF-${String(sale.timestamp).slice(-6)}`, 10, 51);
-      doc.text(`Date & Time: ${new Date(sale.timestamp).toLocaleString()}`, 10, 57);
-      
-      doc.text(`Customer Name: ${sale.customerName || 'Walk-in Partner'}`, 120, 51);
-      doc.text(`Customer Phone: ${sale.customerPhone || 'N/A'}`, 120, 57);
-
-      const headers = [["Item Description", "Brand", "Unit Price", "Qty", "Total (BDT)"]];
-      const data = [
-        [sale.itemName, sale.brand, `BDT ${sale.unitPrice.toLocaleString()}`, `${sale.qty} ${sale.unit}`, `BDT ${sale.total.toLocaleString()}`]
-      ];
-
-      autoTable(doc, {
-        startY: 65,
-        head: headers,
-        body: data,
-        theme: 'grid',
-        headStyles: { fillColor: [8, 22, 33], textColor: [255, 255, 255] },
-        styles: { fontSize: 10, halign: 'center' },
-        columnStyles: { 0: { halign: 'left' } },
-        didDrawPage: () => {
-          doc.rect(5, 5, 200, 287, 'S');
-        }
-      });
-
-      const finalY = doc.lastAutoTable.finalY + 12;
-      doc.setFont("helvetica", "bold");
-      doc.text(`Grand Total: BDT ${sale.total.toLocaleString()}`, 120, finalY);
-
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "italic");
-      doc.text("Generated via Hashina Traders Local Terminal. Official signature and seal required.", 105, 260, { align: "center" });
-      doc.text("Authorized Signature & Seal", 160, 250, { align: "center" });
-      doc.line(135, 246, 185, 246);
+      entityTitle = "OFFLINE POS CASH MEMO";
+      invoiceId = `OFF-${String(sale.timestamp).slice(-6)}`;
+      invoiceDate = new Date(sale.timestamp).toLocaleString();
+      customerName = sale.customerName || "Walk-in Partner";
+      customerPhone = sale.customerPhone || "N/A";
+      customerLocation = sale.customerLocation || "N/A";
+      deliveryHand = sale.deliveryHand || "N/A";
+      couponDeduct = sale.discount || 0;
+      couponCodeUsed = sale.discountCode || "";
     } else {
       const ordersList = Array.isArray(printData.data) ? printData.data : [printData.data as Order];
       const mainOrder = ordersList[0];
-      
-      doc.setFont("helvetica", "bold");
-      doc.text("ONLINE PURCHASE INVOICE", 10, 44);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Order IDs: ${ordersList.map(o => o.id.slice(0, 8).toUpperCase()).join(', ')}`, 10, 51);
-      doc.text(`Submitted On: ${new Date(mainOrder.createdAt).toLocaleDateString()}`, 10, 57);
-      
-      doc.text(`Customer Name: ${mainOrder.customerInfo?.name || 'Customer Partner'}`, 120, 51);
-      doc.text(`Customer Phone: ${mainOrder.customerInfo?.phone || 'N/A'}`, 120, 57);
-      doc.text(`Delivery Address: ${mainOrder.customerInfo?.address || 'N/A'}, ${mainOrder.customerInfo?.thana || ''}`, 10, 63);
+      entityTitle = "ONLINE PURCHASE INVOICE";
+      invoiceId = ordersList.map(o => o.id.slice(0, 8).toUpperCase()).join(', ');
+      invoiceDate = new Date(mainOrder?.createdAt || Date.now()).toLocaleString();
+      customerName = mainOrder?.customerInfo?.name || "Customer Partner";
+      customerPhone = mainOrder?.customerInfo?.phone || "N/A";
+      customerLocation = `${mainOrder?.customerInfo?.address || 'N/A'}, ${mainOrder?.customerInfo?.thana || ''}, ${mainOrder?.customerInfo?.district || ''}`;
+      deliveryHand = "M/S Hasina Logistics Team";
+      orderNotes = mainOrder?.customerInfo?.notes || "";
+    }
 
-      const headers = [["Item Name", "Brand", "Unit Price", "Qty", "Total (BDT)"]];
-      const data: any[] = [];
-      let subtotalSum = 0;
+    const drawPageHeader = (pdf: any) => {
+      // Draw outer border frame on every page sheet cleanly
+      pdf.rect(5, 5, 200, 287, 'S');
+
+      // Corporate Branding Identity Header - Clean Blueprint layout (No web ribbon backgrounds)
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(20);
+      pdf.setTextColor(26, 37, 48); // Navy blue print branding
+      pdf.text("M/S HASINA TRADERS", 105, 16, { align: "center" });
+
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(80, 80, 80);
+      pdf.text("Proprietor: Babul Matubbar | Hotline: +880-1988030534, +880-1996418168", 105, 22, { align: "center" });
+      pdf.text("Location: Batikamari Bazar, Gopalganj, Bangladesh", 105, 27, { align: "center" });
       
+      // Clean neat separation divider
+      pdf.setDrawColor(26, 37, 48);
+      pdf.setLineWidth(0.4);
+      pdf.line(10, 31, 200, 31);
+
+      // Core Information metadata grid (Customer records + transport accountability)
+      pdf.setFontSize(9);
+      pdf.setTextColor(50, 50, 50);
+      
+      pdf.setFont("helvetica", "bold");
+      pdf.text(entityTitle, 10, 37);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`Invoice ID: ${invoiceId}`, 10, 42);
+      pdf.text(`Date & Time: ${invoiceDate}`, 10, 47);
+      
+      pdf.text(`Customer Name: ${customerName}`, 120, 42);
+      pdf.text(`Customer Phone: ${customerPhone}`, 120, 47);
+      
+      pdf.text(`Delivery Location: ${customerLocation}`, 10, 53);
+      pdf.text(`Logs / Driver Hand: ${deliveryHand}`, 120, 53);
+
+      pdf.line(10, 57, 200, 57);
+    };
+
+    // Draw original background page header
+    drawPageHeader(doc);
+
+    let tableHeaders: string[][] = [["Item Description", "Brand / Variant", "Unit Price", "Qty / Amount", "Total (BDT)"]];
+    let tableBody: any[][] = [];
+
+    if (printData.type === 'offline') {
+      const sale = printData.data as OfflineSale;
+      tableBody = sale.items.map(item => [
+        item.name,
+        item.brand,
+        `BDT ${item.unitPrice.toLocaleString()}`,
+        `${item.qty} ${item.unit}`,
+        `BDT ${item.total.toLocaleString()}`
+      ]);
+    } else {
+      const ordersList = Array.isArray(printData.data) ? printData.data : [printData.data as Order];
       ordersList.forEach(o => {
         o.items.forEach(item => {
           const itemPrice = item.product?.salePrice || (item as any).salePrice || 0;
           const qty = item.quantity || (item as any).cartQty || 1;
           const totalLine = itemPrice * qty;
-          subtotalSum += totalLine;
-          data.push([
-            item.product?.name || (item as any).name || 'Unknown Item',
-            item.product?.brand || (item as any).brand || 'Generic',
+          tableBody.push([
+            item.product?.name || (item as any).name || 'Unknown Product',
+            item.product?.brand || (item as any).brand || 'Premium',
             `BDT ${itemPrice.toLocaleString()}`,
             `${qty} units`,
             `BDT ${totalLine.toLocaleString()}`
           ]);
         });
       });
-
-      autoTable(doc, {
-        startY: 69,
-        head: headers,
-        body: data,
-        theme: 'grid',
-        headStyles: { fillColor: [8, 22, 33], textColor: [255, 255, 255] },
-        styles: { fontSize: 9, halign: 'center' },
-        columnStyles: { 0: { halign: 'left' } },
-        didDrawPage: () => {
-          doc.rect(5, 5, 200, 287, 'S');
-        }
-      });
-
-      const finalY = doc.lastAutoTable.finalY + 12;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.text(`Subtotal : BDT ${subtotalSum.toLocaleString()}`, 120, finalY);
-      
-      const totalDeliv = ordersList.reduce((acc, o) => acc + (o.deliveryCharge || 0), 0);
-      const totalGrand = ordersList.reduce((acc, o) => acc + (o.total || 0), 0);
-      const paymentGateway = mainOrder.customerInfo?.paymentMethod || 'Cash on Delivery';
-
-      doc.text(`Delivery Charge: BDT ${totalDeliv.toLocaleString()}`, 120, finalY + 6);
-      doc.text(`Payment Gateway: ${paymentGateway}`, 10, finalY);
-      
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text(`Grand Total: BDT ${totalGrand.toLocaleString()}`, 120, finalY + 14);
-
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "italic");
-      doc.text("Thank you for ordering online from M/S Hasina Traders! Under active shipment tracking.", 105, 260, { align: "center" });
-      doc.text("Authorized Signature & Seal", 160, 250, { align: "center" });
-      doc.line(135, 246, 185, 246);
     }
 
-    let docName = '';
+    autoTable(doc, {
+      startY: 62,
+      head: tableHeaders,
+      body: tableBody,
+      theme: 'grid',
+      headStyles: { fillColor: [26, 37, 48], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 9, halign: 'center', cellPadding: 2.5 },
+      columnStyles: { 0: { halign: 'left' } },
+      margin: { top: 62 },
+      willDrawPage: (data: any) => {
+        // Automatically duplicate company header and legal customer index at top of overflows
+        if (data.pageNumber > 1) {
+          drawPageHeader(doc);
+        }
+      },
+      didDrawPage: () => {
+        // Ensure standard frame border is preserved on page transitions
+        doc.rect(5, 5, 200, 287, 'S');
+      }
+    });
+
+    let finalY = doc.lastAutoTable.finalY + 12;
+    if (finalY > 230) {
+      doc.addPage();
+      drawPageHeader(doc);
+      finalY = 65;
+    }
+
+    // Mathematical summary layout
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(30, 30, 30);
+
+    let subtotalSum = 0;
+    let totalSaved = 0;
+    let grandTotalAmount = 0;
+
     if (printData.type === 'offline') {
       const sale = printData.data as OfflineSale;
-      const cName = sale.customerName || 'Walk-in Partner';
-      const cPhone = sale.customerPhone || 'N/A';
-      const q = sale.qty || 1;
-      docName = `${cName}, ${cPhone} -${q}.pdf`;
+      subtotalSum = sale.subtotal || sale.total;
+      totalSaved = sale.discount || 0;
+      grandTotalAmount = sale.total;
+
+      doc.text(`Subtotal Sum: BDT ${subtotalSum.toLocaleString()}`, 120, finalY);
+      if (totalSaved > 0) {
+        doc.text(`Coupon Discount [${couponCodeUsed}]: BDT -${totalSaved.toLocaleString()}`, 120, finalY + 6);
+        finalY += 12;
+      } else {
+        finalY += 6;
+      }
     } else {
       const ordersList = Array.isArray(printData.data) ? printData.data : [printData.data as Order];
-      const mainOrder = ordersList[0];
-      const cName = mainOrder.customerInfo?.name || 'Customer Partner';
-      const cPhone = mainOrder.customerInfo?.phone || 'N/A';
-      const q = ordersList.reduce((acc, o) => acc + o.items.reduce((sum, item) => sum + (item.quantity || 1), 0), 0);
-      docName = `${cName}, ${cPhone} -${q}.pdf`;
+      subtotalSum = ordersList.reduce((acc, o) => acc + (o.subtotal || o.total), 0);
+      const deliveryTotal = ordersList.reduce((acc, o) => acc + (o.deliveryCharge || 0), 0);
+      grandTotalAmount = ordersList.reduce((acc, o) => acc + o.total, 0);
+
+      doc.text(`Subtotal Sum: BDT ${subtotalSum.toLocaleString()}`, 120, finalY);
+      doc.text(`Delivery Logistics: BDT ${deliveryTotal.toLocaleString()}`, 120, finalY + 6);
+      finalY += 12;
     }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(`Grand Total: BDT ${grandTotalAmount.toLocaleString()}`, 120, finalY);
+
+    if (orderNotes) {
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(110, 110, 110);
+      doc.text(`Instructions: ${orderNotes}`, 10, finalY);
+    }
+
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(100, 100, 100);
+    doc.text("Generated securely via M/S Hasina Traders workstation database portal.", 105, 272, { align: "center" });
+    doc.text("Authorized Signature & Seal", 160, 260, { align: "center" });
+    doc.line(135, 256, 185, 256);
+
+    // Deterministic PDF Naming layout with revision count appending
+    const customerNameClean = customerName.replace(/[^a-zA-Z0-9 ]/g, "").trim();
+    const phoneClean = customerPhone.replace(/[^0-9]/g, "").trim();
+    
+    const getPhoneVersionCount = (phone: string) => {
+      if (!phone || phone === 'N/A') return 1;
+      const offlineMatchCount = offlineSales.filter(s => s.customerPhone?.replace(/[^0-9]/g, "") === phone).length;
+      const onlineMatchCount = onlineOrders.filter(o => o.customerInfo?.phone?.replace(/[^0-9]/g, "") === phone).length;
+      return offlineMatchCount + onlineMatchCount + 1;
+    };
+
+    const versionNum = getPhoneVersionCount(phoneClean);
+    let docName = "";
+    if (versionNum > 1) {
+      docName = `${customerNameClean}, ${phoneClean} -${versionNum}.pdf`;
+    } else {
+      docName = `${customerNameClean}, ${phoneClean}.pdf`;
+    }
+    
     doc.save(docName);
   };
 
@@ -274,7 +337,7 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
       {printData && (
         <div id="printable-invoice" className="w-full max-w-3xl mx-auto p-4 bg-white text-black font-sans leading-relaxed border my-8 shadow-xl">
           <div className="text-center mb-6 pb-4 border-b-2 border-gray-800">
-            <h1 className="text-2xl font-bold bg-gray-100 py-1 mb-3 rounded-md border border-gray-300 w-1/3 mx-auto uppercase tracking-widest">CASH MEMO</h1>
+            <h1 className="text-2xl font-bold bg-gray-100 py-1 mb-3 rounded-md border border-gray-300 w-1/4 mx-auto uppercase tracking-widest">CASH MEMO</h1>
             <h2 className="text-4xl font-black mb-1">মেসার্স হাসিনা ট্রেডার্স</h2>
             <p className="text-xl font-bold tracking-wide">M/S Hasina Traders</p>
             <p className="text-md mt-2 font-medium">Proprietor: Babul Matubbar</p>
@@ -340,25 +403,28 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
               </tr>
             </thead>
             <tbody>
-              {printData.type === 'offline' && (
-                <tr>
-                  <td className="border border-gray-800 px-3 py-2 text-center">1</td>
+              {printData.type === 'offline' && (printData.data as OfflineSale).items.map((item, idx) => (
+                <tr key={idx}>
+                  <td className="border border-gray-800 px-3 py-2 text-center">{idx + 1}</td>
                   <td className="border border-gray-800 px-3 py-2">
-                    <span className="font-bold opacity-75">{(printData.data as OfflineSale).brand}</span> - {(printData.data as OfflineSale).itemName}
+                    <span className="font-bold opacity-75">{item.brand}</span> - {item.name}
                   </td>
-                  <td className="border border-gray-800 px-3 py-2 text-center">{(printData.data as OfflineSale).qty} {(printData.data as OfflineSale).unit}</td>
-                  <td className="border border-gray-800 px-3 py-2 text-center">{(printData.data as OfflineSale).unitPrice.toLocaleString()}</td>
-                  <td className="border border-gray-800 px-3 py-2 text-right font-bold">{(printData.data as OfflineSale).total.toLocaleString()}</td>
+                  <td className="border border-gray-800 px-3 py-2 text-center">{item.qty} {item.unit}</td>
+                  <td className="border border-gray-800 px-3 py-2 text-center">{item.unitPrice.toLocaleString()}</td>
+                  <td className="border border-gray-800 px-3 py-2 text-right font-bold">{item.total.toLocaleString()}</td>
                 </tr>
-              )}
+              ))}
               {printData.type === 'online' && (Array.isArray(printData.data) ? printData.data.flatMap(o => o.items) : (printData.data as Order).items).map((item, idx) => {
                 const name = item.product?.name || (item as any).name || 'Unknown Item';
                 const qty = item.quantity || (item as any).cartQty || 1;
                 const price = item.product?.salePrice || (item as any).salePrice || 0;
+                const brand = item.product?.brand || (item as any).brand || 'Generic';
                 return (
                   <tr key={item.product?.id || (item as any).id || idx}>
                     <td className="border border-gray-800 px-3 py-2 text-center">{idx + 1}</td>
-                    <td className="border border-gray-800 px-3 py-2">{name}</td>
+                    <td className="border border-gray-800 px-3 py-2">
+                      <span className="font-bold opacity-75">{brand}</span> - {name}
+                    </td>
                     <td className="border border-gray-800 px-3 py-2 text-center">{qty} pcs</td>
                     <td className="border border-gray-800 px-3 py-2 text-center">{price.toLocaleString()}</td>
                     <td className="border border-gray-800 px-3 py-2 text-right font-bold">{(price * qty).toLocaleString()}</td>
@@ -372,7 +438,7 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
             <div className="w-1/2 border border-gray-800 p-3 bg-gray-50 text-sm">
               <div className="flex justify-between mb-1 pb-1 border-b border-gray-300">
                 <span>Subtotal:</span>
-                <span>৳{(printData.type === 'online' ? (Array.isArray(printData.data) ? printData.data.reduce((acc, o) => acc + (o.subtotal || (o as any).total), 0) : ((printData.data as Order).subtotal || (printData.data as any).total)) : (printData.data as OfflineSale).total).toLocaleString()}</span>
+                <span>৳{(printData.type === 'online' ? (Array.isArray(printData.data) ? printData.data.reduce((acc, o) => acc + (o.subtotal || (o as any).total), 0) : ((printData.data as Order).subtotal || (printData.data as any).total)) : ((printData.data as OfflineSale).subtotal || (printData.data as OfflineSale).total)).toLocaleString()}</span>
               </div>
               {printData.type === 'online' && (
                 <div className="flex justify-between mb-1 pb-1 border-b border-gray-300">
@@ -380,10 +446,10 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
                   <span>৳{(Array.isArray(printData.data) ? printData.data.reduce((acc, o) => acc + (o.deliveryCharge || 0), 0) : ((printData.data as Order).deliveryCharge || 0)).toLocaleString()}</span>
                 </div>
               )}
-              {printData.type === 'offline' && (
+              {printData.type === 'offline' && (printData.data as OfflineSale).discount > 0 && (
                 <div className="flex justify-between mb-1 pb-1 border-b border-gray-300">
-                  <span>Discount:</span>
-                  <span>৳0</span>
+                  <span>Discount ({(printData.data as OfflineSale).discountCode || 'Coupon'}):</span>
+                  <span>৳-{(printData.data as OfflineSale).discount.toLocaleString()}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-lg pt-1">
@@ -408,68 +474,238 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
 };
 
 const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
-  const { brands, addOfflineSale, offlineSales } = useStore();
-  const [brand, setBrand] = useState(brands[0] || '');
-  const [itemName, setItemName] = useState('');
-  const [unit, setUnit] = useState<OfflineSale['unit']>('KG');
-  const [qty, setQty] = useState<number | ''>('');
-  const [unitPrice, setUnitPrice] = useState<number | ''>('');
+  const { brands, units, addOfflineSale, offlineSales, addBrand, addUnit } = useStore();
   
-  // Custom Customer parameters
+  // State for line items array
+  const [items, setItems] = useState<Array<{
+    productId: string;
+    name: string;
+    brand: string;
+    qty: number | '';
+    unit: string;
+    unitPrice: number | '';
+    total: number;
+  }>>([
+    {
+      productId: 'custom-' + Date.now(),
+      name: '',
+      brand: brands[0] || 'BSRM',
+      qty: '',
+      unit: (units && units[0]) || 'KG',
+      unitPrice: '',
+      total: 0
+    }
+  ]);
+
+  // Customer identification card parameters
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerLocation, setCustomerLocation] = useState('');
   const [deliveryHand, setDeliveryHand] = useState('');
+
+  // Coupon / Discount Code features
+  const [discountCode, setDiscountCode] = useState('');
+  const [discountValue, setDiscountValue] = useState(0);
+  const [couponError, setCouponError] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState('');
+
+  // Quick-action inline modal controls
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [newBrandName, setNewBrandName] = useState('');
+  const [showUnitModal, setShowUnitModal] = useState(false);
+  const [newUnitName, setNewUnitName] = useState('');
 
   // Lifetime search & filters states
   const [searchTerm, setSearchTerm] = useState('');
   const [startDateStr, setStartDateStr] = useState('');
   const [endDateStr, setEndDateStr] = useState('');
 
-  const total = (Number(qty) || 0) * (Number(unitPrice) || 0);
+  // Safe Fallback calculation for total values
+  const subtotal = items.reduce((acc, item) => acc + item.total, 0);
+  const total = Math.max(0, subtotal - discountValue);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Apply Coupon Logic
+  const handleApplyCoupon = () => {
+    setCouponError('');
+    const code = discountCode.trim().toUpperCase();
+    if (!code) {
+      setDiscountValue(0);
+      setAppliedCoupon('');
+      return;
+    }
+
+    if (code === 'SAVE10') {
+      // 10% discount max BDT 2000
+      const calc = Math.min(2000, Math.round(subtotal * 0.10));
+      setDiscountValue(calc);
+      setAppliedCoupon(code);
+    } else if (code === 'HASINA100') {
+      // flat BDT 100 off
+      setDiscountValue(100);
+      setAppliedCoupon(code);
+    } else if (code === 'BULKSAVE' && subtotal > 50000) {
+      // flat BDT 5000 off of subtotal > 50,000
+      setDiscountValue(5000);
+      setAppliedCoupon(code);
+    } else if (code === 'BULKSAVE') {
+      setCouponError('BULKSAVE requires a subtotal greater than BDT 50,000!');
+    } else {
+      setCouponError('Invalid / Inactive Coupon Code!');
+      setDiscountValue(0);
+      setAppliedCoupon('');
+    }
+  };
+
+  const handleAddBrandSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!brand || !itemName || !qty || !unitPrice) return;
-    addOfflineSale({ 
-      brand, 
-      itemName, 
-      unit, 
-      qty: Number(qty), 
-      unitPrice: Number(unitPrice), 
+    const cleanBrand = newBrandName.trim();
+    if (!cleanBrand) return;
+    await addBrand(cleanBrand);
+    setNewBrandName('');
+    setShowBrandModal(false);
+  };
+
+  const handleAddUnitSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanUnit = newUnitName.trim();
+    if (!cleanUnit) return;
+    await addUnit(cleanUnit);
+    setNewUnitName('');
+    setShowUnitModal(false);
+  };
+
+  const handleAddRow = () => {
+    setItems([
+      ...items,
+      {
+        productId: 'custom-' + Date.now() + Math.random().toString(36).substr(2, 4),
+        name: '',
+        brand: brands[0] || 'Generic',
+        qty: '',
+        unit: (units && units[0]) || 'KG',
+        unitPrice: '',
+        total: 0
+      }
+    ]);
+  };
+
+  const handleUpdateRow = (index: number, field: string, value: any) => {
+    const updated = [...items];
+    updated[index] = { ...updated[index], [field]: value };
+    
+    if (field === 'qty' || field === 'unitPrice') {
+      const qty = Number(field === 'qty' ? value : updated[index].qty) || 0;
+      const unitPrice = Number(field === 'unitPrice' ? value : updated[index].unitPrice) || 0;
+      updated[index].total = Number((qty * unitPrice).toFixed(2));
+    }
+    setItems(updated);
+  };
+
+  const handleRemoveRow = (index: number) => {
+    if (items.length <= 1) {
+      alert("At least one line item is required for POS records!");
+      return;
+    }
+    setItems(items.filter((_, idx) => idx !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Check mandatory customer identification inputs
+    if (!customerLocation.trim()) {
+      alert("Validation Failed: Customer Delivery Location is mandatory!");
+      return;
+    }
+    if (!deliveryHand.trim()) {
+      alert("Validation Failed: Delivery Hand / Driver Name is mandatory!");
+      return;
+    }
+
+    // Check row item valid bounds
+    const invalidItem = items.find(item => !item.name.trim() || !item.qty || !item.unitPrice);
+    if (invalidItem) {
+      alert("Validation Failed: One or more rows have empty description, quantity, or rate!");
+      return;
+    }
+
+    const compiledItems = items.map(item => ({
+      productId: item.productId,
+      name: item.name.trim(),
+      brand: item.brand,
+      qty: Number(item.qty),
+      unit: item.unit,
+      unitPrice: Number(item.unitPrice),
+      total: item.total
+    }));
+
+    await addOfflineSale({
+      items: compiledItems,
+      subtotal,
+      discount: discountValue,
+      discountCode: appliedCoupon || undefined,
       total,
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
-      customerLocation: customerLocation.trim() || undefined,
-      deliveryHand: deliveryHand.trim() || undefined
+      customerLocation: customerLocation.trim(),
+      deliveryHand: deliveryHand.trim()
     });
-    setItemName('');
-    setQty('');
-    setUnitPrice('');
+
+    // Reset components to pristine fresh status state
+    setItems([
+      {
+        productId: 'custom-' + Date.now(),
+        name: '',
+        brand: brands[0] || 'BSRM',
+        qty: '',
+        unit: (units && units[0]) || 'KG',
+        unitPrice: '',
+        total: 0
+      }
+    ]);
     setCustomerName('');
     setCustomerPhone('');
     setCustomerLocation('');
     setDeliveryHand('');
+    setDiscountCode('');
+    setDiscountValue(0);
+    setAppliedCoupon('');
   };
 
   const handlePrintMemoPreSubmit = () => {
-    if (!brand || !itemName || !qty || !unitPrice) {
-      alert("Please fill out the brand, item description, quantity, and unit price fields before printing the memo or downloading the PDF!");
+    if (!customerLocation.trim() || !deliveryHand.trim()) {
+      alert("Please fill out complete mandatory logistics fields (Delivery Location & Delivery Hand) before printing!");
       return;
     }
+
+    const invalidItem = items.find(item => !item.name.trim() || !item.qty || !item.unitPrice);
+    if (invalidItem) {
+      alert("Please provide details, quantity, and rate for all lines before printing preview memo!");
+      return;
+    }
+
+    const compiledItems = items.map(item => ({
+      productId: item.productId,
+      name: item.name.trim(),
+      brand: item.brand,
+      qty: Number(item.qty),
+      unit: item.unit,
+      unitPrice: Number(item.unitPrice),
+      total: item.total
+    }));
+
     const tempSale: OfflineSale = {
       id: `sale-PREVIEW`,
-      brand,
-      itemName,
-      unit,
-      qty: Number(qty),
-      unitPrice: Number(unitPrice),
+      items: compiledItems,
+      subtotal,
+      discount: discountValue,
+      discountCode: appliedCoupon || undefined,
       total,
       timestamp: Date.now(),
       customerName: customerName.trim() || undefined,
       customerPhone: customerPhone.trim() || undefined,
-      customerLocation: customerLocation.trim() || undefined,
-      deliveryHand: deliveryHand.trim() || undefined
+      customerLocation: customerLocation.trim(),
+      deliveryHand: deliveryHand.trim()
     };
     onPrint(tempSale);
   };
@@ -494,19 +730,24 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
           <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase border-b border-gray-100">
             <tr>
               <th className="px-6 py-3">Time</th>
-              <th className="px-6 py-3">Brand & Item</th>
-              <th className="px-6 py-3">Qty</th>
-              <th className="px-6 py-3">Total</th>
+              <th className="px-6 py-3">Brand &amp; Item Sheet</th>
+              <th className="px-6 py-3">Total BDT</th>
               <th className="px-6 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {sales.map(s => (
               <tr key={s.id} className="hover:bg-blue-50/30 transition-colors">
-                <td className="px-6 py-3 whitespace-nowrap text-gray-500">{formatTime(s.timestamp)}</td>
-                <td className="px-6 py-3 text-gray-800"><span className="font-semibold text-[#081621]">{s.brand}</span> - {s.itemName}</td>
-                <td className="px-6 py-3 font-mono">{s.qty} {s.unit}</td>
-                <td className="px-6 py-3 font-mono font-semibold text-[#ef4a23]">৳{s.total.toLocaleString()}</td>
+                <td className="px-6 py-3 whitespace-nowrap text-gray-400 font-mono text-xs">{formatTime(s.timestamp)}</td>
+                <td className="px-6 py-3 text-gray-800">
+                  <div className="font-semibold text-[#081621] truncate max-w-[280px]">
+                    {s.items.map(item => `${item.brand} - ${item.name}`).join(', ')}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Client: {s.customerName || 'Walk-in Partner'} ({s.customerPhone || 'Direct phone N/A'})
+                  </div>
+                </td>
+                <td className="px-6 py-3 font-mono font-bold text-[#ef4a23] space-x-1 whitespace-nowrap">৳{s.total.toLocaleString()} BDT</td>
                 <td className="px-6 py-3 text-right">
                   <button onClick={() => onPrint(s)} className="text-gray-500 hover:text-blue-600 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm text-xs font-semibold flex items-center gap-1 ml-auto">
                     <Printer size={12}/> Print
@@ -524,8 +765,8 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
     const matchSearch = searchTerm.trim() === '' || [
       sale.customerName?.toLowerCase() || '',
       sale.customerPhone || '',
-      sale.itemName.toLowerCase(),
-      sale.brand.toLowerCase()
+      ...sale.items.map(i => i.name.toLowerCase()),
+      ...sale.items.map(i => i.brand.toLowerCase())
     ].some(field => field.includes(searchTerm.toLowerCase()));
 
     let matchStart = true;
@@ -547,88 +788,249 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
 
   return (
     <div className="space-y-8 animate-in fade-in zoom-in-95 duration-200">
-      {/* High-Speed Terminal Form */}
+      {/* High-Speed Multi-Row Terminal Grid */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="w-2 h-6 bg-[#ef4a23] rounded-full"></div>
-          <h2 className="text-xl font-bold text-gray-900">High-Speed Terminal</h2>
-        </div>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
-          <div className="md:col-span-1">
-            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Brand</label>
-            <select value={brand} onChange={e => setBrand(e.target.value)} className="w-full border-gray-300 rounded-md bg-gray-50 p-2.5 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none border font-semibold border-gray-200">
-               {brands.map(b => <option key={b} value={b}>{b}</option>)}
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Item Description</label>
-            <input placeholder="e.g. 16mm Steel Rod" value={itemName} onChange={e => setItemName(e.target.value)} required className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
-          </div>
-          <div className="md:col-span-1 flex gap-2">
-            <div className="flex-1">
-              <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Unit</label>
-              <select value={unit} onChange={e => setUnit(e.target.value as any)} className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none">
-                {['KG', 'Bag', 'Piece', 'Pft', 'Ton'].map(u => <option key={u} value={u}>{u}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="md:col-span-2 grid grid-cols-2 gap-2">
-             <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Qty</label>
-                <input type="number" min="0" step="any" value={qty} onChange={e => setQty(e.target.value)} required className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm font-mono focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
-             </div>
-             <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Price/Unit (BDT)</label>
-                <input type="number" min="0" step="any" value={unitPrice} onChange={e => setUnitPrice(e.target.value)} required className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm font-mono focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
-             </div>
-          </div>
-
-          <div className="md:col-span-3">
-             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Customer Name (Optional)</label>
-             <input placeholder="Enter customer name" value={customerName} onChange={e => setCustomerName(e.target.value)} className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
-          </div>
-          <div className="md:col-span-3">
-             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Customer Phone (Optional)</label>
-             <input placeholder="e.g. 017XXXXXXXX" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm font-mono focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
-          </div>
-          <div className="md:col-span-3">
-             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Customer Location (Optional)</label>
-             <input placeholder="e.g. Batikamari, Gopalganj" value={customerLocation} onChange={e => setCustomerLocation(e.target.value)} className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
-          </div>
-          <div className="md:col-span-3">
-             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Delivery Hand / Driver Name (Optional)</label>
-             <input placeholder="e.g. Kamal Hossain" value={deliveryHand} onChange={e => setDeliveryHand(e.target.value)} className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-6 bg-[#ef4a23] rounded-full"></div>
+            <h2 className="text-xl font-bold text-gray-900">High-Speed POS Custom Grid Terminal</h2>
           </div>
           
-          <div className="md:col-span-6 flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 pt-6 mt-2 gap-4">
-            <div className="space-y-1 w-full sm:w-auto text-center sm:text-left">
-               <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Live Calculation</p>
-               <p className="text-3xl font-bold font-mono text-[#081621] tracking-tight">৳{total.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+          <div className="flex gap-2">
+            <button 
+              type="button" 
+              onClick={() => setShowBrandModal(true)}
+              className="text-xs font-extrabold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 px-3 py-1.5 rounded-md flex items-center gap-1 transition-colors"
+            >
+              <Plus size={12} /> Add New Brand
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setShowUnitModal(true)}
+              className="text-xs font-extrabold bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-md flex items-center gap-1 transition-colors"
+            >
+              <Plus size={12} /> Add New Unit
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Customer Identification Card */}
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Customer Name</label>
+              <input 
+                placeholder="Walk-in Partner" 
+                value={customerName} 
+                onChange={e => setCustomerName(e.target.value)} 
+                className="w-full bg-white border border-gray-300 rounded-md p-2 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" 
+              />
             </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Customer Phone</label>
+              <input 
+                placeholder="e.g. 017XXXXXXXX" 
+                value={customerPhone} 
+                onChange={e => setCustomerPhone(e.target.value)} 
+                className="w-full bg-white border border-gray-300 rounded-md p-2 text-sm font-mono focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" 
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider flex items-center gap-1">
+                Customer Location <span className="text-red-500 font-bold">*</span>
+              </label>
+              <input 
+                placeholder="e.g. Batikamari, Gopalganj" 
+                value={customerLocation} 
+                onChange={e => setCustomerLocation(e.target.value)} 
+                required
+                className="w-full bg-white border border-gray-300 rounded-md p-2 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none font-semibold text-gray-800" 
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider flex items-center gap-1">
+                Driver / Transport Delivery Hand <span className="text-red-500 font-bold">*</span>
+              </label>
+              <input 
+                placeholder="e.g. Kamal Hossain" 
+                value={deliveryHand} 
+                onChange={e => setDeliveryHand(e.target.value)} 
+                required
+                className="w-full bg-white border border-gray-300 rounded-md p-2 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none font-semibold text-gray-800" 
+              />
+            </div>
+          </div>
+
+          {/* Dynamic Item Invoice Rows Table Section */}
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-[#081621] text-white text-xs uppercase font-extrabold tracking-wide">
+                <tr>
+                  <th className="px-4 py-3 w-1/6">Brand</th>
+                  <th className="px-4 py-3 w-1/3">Item Description Details</th>
+                  <th className="px-4 py-3 w-1/12">Unit</th>
+                  <th className="px-4 py-3 w-1/12">Quantity</th>
+                  <th className="px-4 py-3 w-1/6">Unit Price (BDT)</th>
+                  <th className="px-4 py-3 w-1/8 text-right">Row Sum</th>
+                  <th className="px-4 py-3 w-12 text-center">Trash</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {items.map((item, idx) => (
+                  <tr key={item.productId} className="hover:bg-slate-50 transition-colors">
+                    <td className="p-2">
+                      <select 
+                        value={item.brand} 
+                        onChange={e => handleUpdateRow(idx, 'brand', e.target.value)} 
+                        className="w-full border border-gray-300 rounded p-1.5 text-xs font-bold bg-white"
+                      >
+                        {brands.map(b => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </td>
+                    <td className="p-2">
+                      <input 
+                        type="text" 
+                        placeholder="e.g. 16mm Steel Rod (BSRM-500W-grade)" 
+                        value={item.name} 
+                        onChange={e => handleUpdateRow(idx, 'name', e.target.value)}
+                        required
+                        className="w-full border border-gray-300 rounded p-1.5 text-xs outline-none focus:border-[#ef4a23]" 
+                      />
+                    </td>
+                    <td className="p-2">
+                      <select 
+                        value={item.unit} 
+                        onChange={e => handleUpdateRow(idx, 'unit', e.target.value)} 
+                        className="w-full border border-gray-300 rounded p-1.5 text-xs bg-white"
+                      >
+                        {units.map(u => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </td>
+                    <td className="p-2">
+                      <input 
+                        type="number" 
+                        min="0" 
+                        step="any"
+                        placeholder="0" 
+                        value={item.qty} 
+                        onChange={e => handleUpdateRow(idx, 'qty', e.target.value)}
+                        required
+                        className="w-full border border-gray-300 rounded p-1.5 text-xs font-mono font-bold text-center" 
+                      />
+                    </td>
+                    <td className="p-2">
+                      <input 
+                        type="number" 
+                        min="0" 
+                        step="any"
+                        placeholder="Rates" 
+                        value={item.unitPrice} 
+                        onChange={e => handleUpdateRow(idx, 'unitPrice', e.target.value)}
+                        required
+                        className="w-full border border-gray-300 rounded p-1.5 text-xs font-mono font-bold text-center" 
+                      />
+                    </td>
+                    <td className="p-2 text-right font-mono font-extrabold text-slate-800 text-xs shrink-0 whitespace-nowrap">
+                      ৳{item.total.toLocaleString()} BDT
+                    </td>
+                    <td className="p-2 text-center">
+                      <button 
+                        type="button" 
+                        onClick={() => handleRemoveRow(idx)}
+                        title="Delete this item row"
+                        className="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded-full hover:bg-red-100 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex justify-start">
+            <button 
+              type="button" 
+              onClick={handleAddRow}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-md flex items-center gap-1.5 shadow-sm transition-colors"
+            >
+              <Plus size={14} /> + Add Line Item
+            </button>
+          </div>
+
+          {/* Pricing Calculation Summary panel */}
+          <div className="border-t border-gray-100 pt-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-slate-50/50 p-4 rounded-lg">
             
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <button 
-                type="button" 
-                onClick={handlePrintMemoPreSubmit}
-                className="bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-md font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 text-sm text-center"
-              >
-                <Printer size={16}/> Print POS Cash Memo
-              </button>
-              <button 
-                type="submit" 
-                className="bg-[#ef4a23] hover:bg-[#d83c17] text-white px-8 py-3 rounded-md font-bold shadow-lg shadow-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm text-center"
-              >
-                <Plus size={18} /> Add Recorded Entry to Save
-              </button>
+            {/* Coupon Code Engine block */}
+            <div className="w-full lg:w-2/5 space-y-1 bg-white p-3 rounded-md border border-gray-200">
+              <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Coupon Code (Available: SAVE10, HASINA100, BULKSAVE)</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="e.g. SAVE10" 
+                  value={discountCode} 
+                  onChange={e => setDiscountCode(e.target.value)} 
+                  className="border border-gray-300 bg-gray-50 rounded px-2.5 py-1.5 text-xs outline-none focus:border-[#ef4a23] uppercase font-bold flex-1"
+                />
+                <button 
+                  type="button" 
+                  onClick={handleApplyCoupon}
+                  className="bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-xs px-4 py-2 rounded transition-colors whitespace-nowrap shadow-sm"
+                >
+                  Verify Coupon
+                </button>
+              </div>
+              {appliedCoupon && (
+                <p className="text-[11px] text-green-700 font-bold">✓ Coupon [{appliedCoupon}] Applied successfully (Discount: BDT {discountValue.toLocaleString()})!</p>
+              )}
+              {couponError && (
+                <p className="text-[11px] text-red-600 font-bold">✕ {couponError}</p>
+              )}
             </div>
+
+            {/* Price Calculations Output */}
+            <div className="text-right space-y-1 w-full lg:w-auto">
+              <div className="flex justify-between lg:justify-end gap-12 text-sm text-gray-500">
+                <span>Items Subtotal:</span>
+                <span className="font-mono font-bold">৳{subtotal.toLocaleString(undefined, {minimumFractionDigits: 1})}</span>
+              </div>
+              {discountValue > 0 && (
+                <div className="flex justify-between lg:justify-end gap-12 text-sm text-green-700 font-bold">
+                  <span>Discount Total [{appliedCoupon}]:</span>
+                  <span className="font-mono">৳-{discountValue.toLocaleString(undefined, {minimumFractionDigits: 1})}</span>
+                </div>
+              )}
+              <div className="border-t border-gray-300 pt-2 flex justify-between lg:justify-end gap-12 items-baseline">
+                <span className="text-md font-bold text-gray-700">POS Net Ledger:</span>
+                <span className="text-3xl font-black font-mono text-[#ef4a23] tracking-tight">৳{total.toLocaleString(undefined, {minimumFractionDigits: 1})} <span className="text-xs font-normal text-gray-500 uppercase">BDT</span></span>
+              </div>
+            </div>
+          </div>
+
+          {/* Form Action Controls */}
+          <div className="flex flex-col sm:flex-row justify-end items-center gap-3 border-t border-gray-100 pt-4">
+            <button 
+              type="button" 
+              onClick={handlePrintMemoPreSubmit}
+              className="w-full sm:w-auto bg-[#081621] hover:bg-[#122838] text-white px-6 py-3 rounded-md font-extrabold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 text-xs uppercase"
+            >
+              <Printer size={16}/> Print Memo / Download PDF Invoice
+            </button>
+            <button 
+              type="submit" 
+              className="w-full sm:w-auto bg-[#ef4a23] hover:bg-[#d83c17] text-white px-8 py-3 rounded-md font-extrabold shadow-lg shadow-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 text-xs uppercase"
+            >
+              <Plus size={18} /> Add Recorded Cash Transaction Sheet to DB
+            </button>
           </div>
         </form>
       </div>
 
       {/* Daily Sales Boxes split-layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-         <SalesTable sales={todaySales} title="Today's Sales Box" accent="border-[#ef4a23]" />
-         <SalesTable sales={yesterdaySales} title={`Yesterday's Sales Box (${formatDate(todayStart - 86400000)})`} accent="border-gray-400" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+         <SalesTable sales={todaySales} title="Today's POS Daily Sheet" accent="border-[#ef4a23]" />
+         <SalesTable sales={yesterdaySales} title={`Yesterday's POS Daily Sheet (${formatDate(todayStart - 86400000)})`} accent="border-slate-400" />
       </div>
 
       {/* Lifetime Offline Sales History & Advanced Search/Filter System */}
@@ -636,9 +1038,9 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
         <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50/80">
           <div>
             <h3 className="font-bold text-gray-900 flex items-center gap-2">
-              <Database size={18} className="text-[#ef4a23]" /> Lifetime Offline Sales Ledger History
+              <Database size={18} className="text-[#ef4a23]" /> Lifetime Physical Transaction Sales Ledger
             </h3>
-            <p className="text-xs text-gray-500 mt-1">Audit and search all historical physical transactions stored permanently in your workstation ledger.</p>
+            <p className="text-xs text-gray-500 mt-1">Audit, search, and track all historical items sheets permanently stored inside the company terminal registry.</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full">
@@ -660,7 +1062,7 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
                 placeholder="Search by Customer Name, Phone, Brand, or Item..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full border-gray-300 border bg-gray-50 rounded-md py-2 px-3 pl-3 pr-8 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none"
+                className="w-full border-gray-300 border bg-gray-50 rounded-md py-2 px-3 pl-3 pr-8 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none font-medium"
               />
               {searchTerm && (
                 <button 
@@ -673,7 +1075,7 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
             </div>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Start Date</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Start Date Range</label>
             <input 
               type="date"
               value={startDateStr}
@@ -682,7 +1084,7 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">End Date</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">End Date Range</label>
             <div className="flex gap-2 items-center">
               <input 
                 type="date"
@@ -692,7 +1094,7 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
               />
               <button 
                 onClick={() => { setSearchTerm(''); setStartDateStr(''); setEndDateStr(''); }}
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold text-xs px-3.5 py-2.5 rounded transition-colors whitespace-nowrap"
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold text-xs px-3.5 py-2.5 rounded transition-colors whitespace-nowrap text-center"
                 title="Reset Filters to defaults"
               >
                 Reset
@@ -714,18 +1116,17 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
                 <tr>
                   <th className="px-6 py-4">Slip Date &amp; Time</th>
                   <th className="px-6 py-4">Invoice ID</th>
-                  <th className="px-6 py-4">Item details (Brand &amp; Desc)</th>
+                  <th className="px-6 py-4">Item Details (Brand &amp; Desc sheet)</th>
                   <th className="px-6 py-4">Customer Details</th>
-                  <th className="px-6 py-4">Logistics Metatags</th>
-                  <th className="px-6 py-4 text-center">Quantity</th>
+                  <th className="px-6 py-4 text-center">Logistics Tags</th>
                   <th className="px-6 py-4 text-right">Invoice Sum</th>
                   <th className="px-6 py-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
                 {[...filteredLifetimeSales].reverse().map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50 transition-colors border-b last:border-0 font-medium text-gray-800 text-xs font-medium">
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-500 select-all">
+                  <tr key={s.id} className="hover:bg-slate-50 transition-colors border-b last:border-0 font-medium text-gray-800 text-xs text-gray-800">
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-500 select-all font-mono">
                       <div>{formatDate(s.timestamp)}</div>
                       <div className="text-[10px] text-gray-400 mt-0.5">{formatTime(s.timestamp)}</div>
                     </td>
@@ -735,8 +1136,14 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-extrabold text-[#081621]">{s.brand}</div>
-                      <div className="text-gray-500 mt-0.5">{s.itemName}</div>
+                      <div className="space-y-1">
+                        {s.items.map((item, idx) => (
+                          <div key={idx} className="text-xs">
+                            <span className="font-extrabold text-[#081621]">{item.brand}:</span> {item.name}{' '}
+                            <span className="text-gray-400 font-mono text-[10px]">({item.qty} {item.unit} @ BDT {item.unitPrice})</span>
+                          </div>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {s.customerName || s.customerPhone ? (
@@ -749,21 +1156,18 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
                       )}
                     </td>
                     <td className="px-6 py-4 select-text">
-                      <div className="space-y-1">
+                      <div className="space-y-1 text-center">
                         <div className="flex items-center gap-1">
                           <span className="text-[9px] bg-sky-50 text-sky-800 font-extrabold px-1.5 py-0.5 rounded border border-sky-200 tracking-wide">LOCATION:</span>
-                          <span className="text-[10px] text-gray-600 font-medium truncate max-w-[150px]">{s.customerLocation || 'N/A'}</span>
+                          <span className="text-[10px] text-gray-600 font-semibold truncate max-w-[150px]">{s.customerLocation || 'N/A'}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <span className="text-[9px] bg-amber-50 text-amber-800 font-extrabold px-1.5 py-0.5 rounded border border-amber-200 tracking-wide">DRIVER / HAND:</span>
-                          <span className="text-[10px] text-gray-600 font-medium truncate max-w-[150px]">{s.deliveryHand || 'N/A'}</span>
+                          <span className="text-[10px] text-gray-600 font-semibold truncate max-w-[150px]">{s.deliveryHand || 'N/A'}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center font-mono font-bold whitespace-nowrap">
-                      {s.qty} <span className="text-gray-400 font-medium text-[10px]">{s.unit}</span>
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono font-extrabold text-[#ef4a23] whitespace-nowrap text-sm">
+                    <td className="px-6 py-4 text-right font-mono font-extrabold text-[#ef4a23] whitespace-nowrap text-sm shrink-0">
                       ৳{s.total.toLocaleString()} BDT
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
@@ -781,6 +1185,100 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
           </div>
         )}
       </div>
+
+      {/* QUICK SELECTORS INLINE ADD MODAL FOR BRAND */}
+      {showBrandModal && (
+        <div className="fixed inset-0 bg-[#081621]/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200 p-4">
+          <div className="bg-white rounded-lg shadow-xl border border-gray-200 max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+              <h3 className="font-extrabold text-gray-900 text-md flex items-center gap-1">
+                <Plus size={16} className="text-indigo-600" /> Registry New Corporate Brand
+              </h3>
+              <button 
+                onClick={() => { setShowBrandModal(false); setNewBrandName(''); }}
+                className="text-gray-400 hover:text-gray-600 text-sm font-bold p-1 rounded hover:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleAddBrandSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Brand Name <span className="text-red-500">*</span></label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. KSRM, Scan Cement, Crown" 
+                  value={newBrandName} 
+                  onChange={e => setNewBrandName(e.target.value)} 
+                  required
+                  className="w-full border border-gray-300 rounded p-2.5 text-sm outline-none focus:border-indigo-500 bg-slate-50 font-semibold"
+                />
+              </div>
+              <div className="flex justify-end gap-2 border-t border-gray-100 pt-3">
+                <button 
+                  type="button" 
+                  onClick={() => { setShowBrandModal(false); setNewBrandName(''); }}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs px-4 py-2 rounded"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="bg-indigo-600 hover:bg-[#ef4a23] text-white font-bold text-xs px-5 py-2 rounded shadow-md"
+                >
+                  Save Brand
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK SELECTORS INLINE ADD MODAL FOR UNIT */}
+      {showUnitModal && (
+        <div className="fixed inset-0 bg-[#081621]/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200 p-4">
+          <div className="bg-white rounded-lg shadow-xl border border-gray-200 max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+              <h3 className="font-extrabold text-gray-900 text-md flex items-center gap-1">
+                <Plus size={16} className="text-amber-600" /> Registry New Unit Format
+              </h3>
+              <button 
+                onClick={() => { setShowUnitModal(false); setNewUnitName(''); }}
+                className="text-gray-400 hover:text-gray-600 text-sm font-bold p-1 rounded hover:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleAddUnitSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Unit Label <span className="text-red-500">*</span></label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Bundle, CFT, Yard, Drum" 
+                  value={newUnitName} 
+                  onChange={e => setNewUnitName(e.target.value)} 
+                  required
+                  className="w-full border border-gray-300 rounded p-2.5 text-sm outline-none focus:border-amber-500 bg-slate-50 font-semibold"
+                />
+              </div>
+              <div className="flex justify-end gap-2 border-t border-gray-100 pt-3">
+                <button 
+                  type="button" 
+                  onClick={() => { setShowUnitModal(false); setNewUnitName(''); }}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs px-4 py-2 rounded"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="bg-amber-600 hover:bg-[#ef4a23] text-white font-bold text-xs px-5 py-2 rounded shadow-md"
+                >
+                  Save Unit
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
