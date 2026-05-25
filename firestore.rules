@@ -45,7 +45,8 @@ service cloud.firestore {
              data.deliveryCharge is number &&
              data.total is number &&
              data.status is string && data.status.size() <= 50 &&
-             data.createdAt is number;
+             data.createdAt is number &&
+             (!data.keys().hasAny(['userId']) || data.userId is string);
     }
 
     // --- Rules ---
@@ -64,9 +65,35 @@ service cloud.firestore {
     }
 
     match /onlineOrders/{orderId} {
-      allow read, update, delete: if isAdmin();
+      allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
       allow create: if isValidOnlineOrder(incoming());
+      allow update, delete: if isAdmin();
     }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null && 
+                       incoming().keys().hasAll(['productId', 'userId', 'userName', 'rating', 'comment', 'createdAt']) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().rating is number &&
+                       incoming().rating >= 1 && incoming().rating <= 5 &&
+                       incoming().comment is string &&
+                       incoming().productId is string &&
+                       incoming().createdAt is number;
+      allow update, delete: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+    }
+
+    match /qas/{qaId} {
+      allow read: if true;
+      allow create: if incoming().keys().hasAll(['productId', 'question', 'askedBy', 'askedById', 'createdAt']) &&
+                       (request.auth == null || incoming().askedById == request.auth.uid) &&
+                       incoming().question is string &&
+                       incoming().productId is string &&
+                       incoming().createdAt is number;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
     match /storeSettings/{settingId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();

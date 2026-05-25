@@ -15,11 +15,15 @@ export interface OfflineSale {
   id: string;
   brand: string;
   itemName: string;
-  unit: 'KG' | 'Bag' | 'Piece' | 'Pft' | 'Ton';
+  unit: string;
   qty: number;
   unitPrice: number;
   total: number;
   timestamp: number;
+  customerName?: string;
+  customerPhone?: string;
+  customerLocation?: string;
+  deliveryHand?: string;
 }
 
 export interface CartItem {
@@ -47,4 +51,28 @@ export interface Order {
   total: number;
   status: 'Pending' | 'Confirmed' | 'Processing' | 'Ready to Ship' | 'Shipped' | 'Delivered' | 'Cancelled';
   createdAt: number;
+  userId?: string;
 }
+
+export interface Review {
+  id: string;
+  productId: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  createdAt: number;
+}
+
+export interface Qa {
+  id: string;
+  productId: string;
+  question: string;
+  askedBy: string;
+  askedById: string;
+  createdAt: number;
+  answer?: string;
+  answeredBy?: string;
+  answeredAt?: number;
+}
+

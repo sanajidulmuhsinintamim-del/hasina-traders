@@ -43,9 +43,40 @@
         "gateway": { "type": "string" },
         "customerName": { "type": "string" },
         "phone": { "type": "string" },
-        "timestamp": { "type": "number" }
+        "timestamp": { "type": "number" },
+        "userId": { "type": "string" }
       },
       "required": ["items", "total", "status", "gateway", "customerName", "phone", "timestamp"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Customer feedback on products",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["productId", "userId", "userName", "rating", "comment", "createdAt"]
+    },
+    "Qa": {
+      "title": "QA",
+      "description": "Product Questions and Answers",
+      "type": "object",
+      "properties": {
+        "productId": { "type": "string" },
+        "question": { "type": "string" },
+        "askedBy": { "type": "string" },
+        "askedById": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "answer": { "type": "string" },
+        "answeredBy": { "type": "string" },
+        "answeredAt": { "type": "number" }
+      },
+      "required": ["productId", "question", "askedBy", "askedById", "createdAt"]
     }
   },
   "firestore": {
@@ -60,6 +91,14 @@
     "onlineOrders/{orderId}": {
       "schema": { "$ref": "#/entities/OnlineOrder" },
       "description": "Online customer orders"
+    },
+    "reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Store user ratings and reviews"
+    },
+    "qas/{qaId}": {
+      "schema": { "$ref": "#/entities/Qa" },
+      "description": "Store user product questions and admin answers"
     }
   }
 }

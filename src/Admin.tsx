@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from './StoreProvider';
-import { LogOut, Package, Database, BarChart3, Plus, Tags, Trash2, Calendar, TrendingUp, Edit, Printer, ShoppingBag, Download } from 'lucide-react';
+import { LogOut, Package, Database, BarChart3, Plus, Tags, Trash2, Calendar, TrendingUp, Edit, Printer, ShoppingBag, Download, MessageSquare } from 'lucide-react';
 import { OfflineSale, Product, Order } from './types';
 import { loginWithGoogle, logoutUser } from './firebase';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export const AdminLogin = ({ onOpenStore }: { onOpenStore: () => void }) => {
   const [error, setError] = useState('');
@@ -38,23 +40,164 @@ export const AdminLogin = ({ onOpenStore }: { onOpenStore: () => void }) => {
 };
 
 export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
-  const [activeTab, setActiveTab] = useState<'POS' | 'ORDERS' | 'PRODUCTS' | 'BRANDS' | 'STATS'>('POS');
+  const [activeTab, setActiveTab] = useState<'POS' | 'ORDERS' | 'PRODUCTS' | 'BRANDS' | 'STATS' | 'QA_MODERATION'>('POS');
   const [printData, setPrintData] = useState<{ type: 'offline', data: OfflineSale } | { type: 'online', data: Order | Order[] } | null>(null);
 
   const handleDownloadPDF = async () => {
     if (!printData) return;
     
-    // Natively trigger print. Browser print dialog defaults to "Save as PDF".
-    // We temporally change document title so the saved PDF has a nice name.
-    const oldTitle = document.title;
-    const fileName = `Hasina_Traders_Invoice_${printData.type === 'offline' ? (printData.data as OfflineSale).id : (Array.isArray(printData.data) ? printData.data[0].id : (printData.data as Order).id)}`;
-    document.title = fileName;
+    // Programmatic high-quality vector jsPDF generator
+    const doc = new jsPDF() as any;
     
-    window.print();
+    // Draw Border Accent Box
+    doc.rect(5, 5, 200, 287, 'S');
+
+    // M/S Hasina Traders Business Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(8, 22, 33);
+    doc.text("M/S HASINA TRADERS", 105, 20, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    doc.text("Proprietor: Babul Matubbar | Hotline: +880-1988030534", 105, 26, { align: "center" });
+    doc.text("Location: Batikamari Bazar, Gopalganj, Bangladesh", 105, 31, { align: "center" });
     
-    setTimeout(() => {
-      document.title = oldTitle;
-    }, 1000);
+    // Separation lines with color codes
+    doc.setDrawColor(239, 74, 35);
+    doc.setLineWidth(0.8);
+    doc.line(10, 36, 200, 36);
+
+    // Metadata details
+    doc.setFontSize(10);
+    doc.setTextColor(50, 50, 50);
+    
+    if (printData.type === 'offline') {
+      const sale = printData.data as OfflineSale;
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("OFFLINE POS CASH MEMO", 10, 44);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Invoice ID: OFF-${String(sale.timestamp).slice(-6)}`, 10, 51);
+      doc.text(`Date & Time: ${new Date(sale.timestamp).toLocaleString()}`, 10, 57);
+      
+      doc.text(`Customer Name: ${sale.customerName || 'Walk-in Partner'}`, 120, 51);
+      doc.text(`Customer Phone: ${sale.customerPhone || 'N/A'}`, 120, 57);
+
+      const headers = [["Item Description", "Brand", "Unit Price", "Qty", "Total (BDT)"]];
+      const data = [
+        [sale.itemName, sale.brand, `BDT ${sale.unitPrice.toLocaleString()}`, `${sale.qty} ${sale.unit}`, `BDT ${sale.total.toLocaleString()}`]
+      ];
+
+      autoTable(doc, {
+        startY: 65,
+        head: headers,
+        body: data,
+        theme: 'grid',
+        headStyles: { fillColor: [8, 22, 33], textColor: [255, 255, 255] },
+        styles: { fontSize: 10, halign: 'center' },
+        columnStyles: { 0: { halign: 'left' } },
+        didDrawPage: () => {
+          doc.rect(5, 5, 200, 287, 'S');
+        }
+      });
+
+      const finalY = doc.lastAutoTable.finalY + 12;
+      doc.setFont("helvetica", "bold");
+      doc.text(`Grand Total: BDT ${sale.total.toLocaleString()}`, 120, finalY);
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "italic");
+      doc.text("Generated via Hashina Traders Local Terminal. Official signature and seal required.", 105, 260, { align: "center" });
+      doc.text("Authorized Signature & Seal", 160, 250, { align: "center" });
+      doc.line(135, 246, 185, 246);
+    } else {
+      const ordersList = Array.isArray(printData.data) ? printData.data : [printData.data as Order];
+      const mainOrder = ordersList[0];
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("ONLINE PURCHASE INVOICE", 10, 44);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Order IDs: ${ordersList.map(o => o.id.slice(0, 8).toUpperCase()).join(', ')}`, 10, 51);
+      doc.text(`Submitted On: ${new Date(mainOrder.createdAt).toLocaleDateString()}`, 10, 57);
+      
+      doc.text(`Customer Name: ${mainOrder.customerInfo?.name || 'Customer Partner'}`, 120, 51);
+      doc.text(`Customer Phone: ${mainOrder.customerInfo?.phone || 'N/A'}`, 120, 57);
+      doc.text(`Delivery Address: ${mainOrder.customerInfo?.address || 'N/A'}, ${mainOrder.customerInfo?.thana || ''}`, 10, 63);
+
+      const headers = [["Item Name", "Brand", "Unit Price", "Qty", "Total (BDT)"]];
+      const data: any[] = [];
+      let subtotalSum = 0;
+      
+      ordersList.forEach(o => {
+        o.items.forEach(item => {
+          const itemPrice = item.product?.salePrice || (item as any).salePrice || 0;
+          const qty = item.quantity || (item as any).cartQty || 1;
+          const totalLine = itemPrice * qty;
+          subtotalSum += totalLine;
+          data.push([
+            item.product?.name || (item as any).name || 'Unknown Item',
+            item.product?.brand || (item as any).brand || 'Generic',
+            `BDT ${itemPrice.toLocaleString()}`,
+            `${qty} units`,
+            `BDT ${totalLine.toLocaleString()}`
+          ]);
+        });
+      });
+
+      autoTable(doc, {
+        startY: 69,
+        head: headers,
+        body: data,
+        theme: 'grid',
+        headStyles: { fillColor: [8, 22, 33], textColor: [255, 255, 255] },
+        styles: { fontSize: 9, halign: 'center' },
+        columnStyles: { 0: { halign: 'left' } },
+        didDrawPage: () => {
+          doc.rect(5, 5, 200, 287, 'S');
+        }
+      });
+
+      const finalY = doc.lastAutoTable.finalY + 12;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text(`Subtotal : BDT ${subtotalSum.toLocaleString()}`, 120, finalY);
+      
+      const totalDeliv = ordersList.reduce((acc, o) => acc + (o.deliveryCharge || 0), 0);
+      const totalGrand = ordersList.reduce((acc, o) => acc + (o.total || 0), 0);
+      const paymentGateway = mainOrder.customerInfo?.paymentMethod || 'Cash on Delivery';
+
+      doc.text(`Delivery Charge: BDT ${totalDeliv.toLocaleString()}`, 120, finalY + 6);
+      doc.text(`Payment Gateway: ${paymentGateway}`, 10, finalY);
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(`Grand Total: BDT ${totalGrand.toLocaleString()}`, 120, finalY + 14);
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "italic");
+      doc.text("Thank you for ordering online from M/S Hasina Traders! Under active shipment tracking.", 105, 260, { align: "center" });
+      doc.text("Authorized Signature & Seal", 160, 250, { align: "center" });
+      doc.line(135, 246, 185, 246);
+    }
+
+    let docName = '';
+    if (printData.type === 'offline') {
+      const sale = printData.data as OfflineSale;
+      const cName = sale.customerName || 'Walk-in Partner';
+      const cPhone = sale.customerPhone || 'N/A';
+      const q = sale.qty || 1;
+      docName = `${cName}, ${cPhone} -${q}.pdf`;
+    } else {
+      const ordersList = Array.isArray(printData.data) ? printData.data : [printData.data as Order];
+      const mainOrder = ordersList[0];
+      const cName = mainOrder.customerInfo?.name || 'Customer Partner';
+      const cPhone = mainOrder.customerInfo?.phone || 'N/A';
+      const q = ordersList.reduce((acc, o) => acc + o.items.reduce((sum, item) => sum + (item.quantity || 1), 0), 0);
+      docName = `${cName}, ${cPhone} -${q}.pdf`;
+    }
+    doc.save(docName);
   };
 
   const navItems = [
@@ -62,6 +205,7 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
     { id: 'ORDERS', label: 'Online Orders', icon: ShoppingBag },
     { id: 'PRODUCTS', label: 'DB Management', icon: Package },
     { id: 'BRANDS', label: 'Brand Registry', icon: Tags },
+    { id: 'QA_MODERATION', label: 'Q&A Moderation', icon: MessageSquare },
     { id: 'STATS', label: 'Analytics', icon: BarChart3 }
   ] as const;
 
@@ -122,6 +266,7 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
         {activeTab === 'ORDERS' && <OnlineOrders onPrint={(order) => setPrintData({ type: 'online', data: order })} />}
         {activeTab === 'PRODUCTS' && <ProductManager />}
         {activeTab === 'BRANDS' && <BrandManager />}
+        {activeTab === 'QA_MODERATION' && <QaModeration />}
         {activeTab === 'STATS' && <Statistics />}
       </main>
 
@@ -154,13 +299,33 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
             </div>
           </div>
           
-          {printData.type === 'online' && (
+          {((printData.type === 'online') || (printData.type === 'offline' && ((printData.data as OfflineSale).customerPhone || (printData.data as OfflineSale).customerName))) && (
             <div className="mb-4 bg-gray-50 border border-gray-200 p-3">
-              <p className="font-bold text-sm uppercase mb-1 border-b pb-1">Customer Information (Online Order)</p>
-              <p className="text-sm"><strong>Name:</strong> {(Array.isArray(printData.data) ? printData.data[0] : (printData.data as Order)).customerInfo?.name || ((Array.isArray(printData.data) ? printData.data[0] : printData.data) as any).customerName || 'Unknown'}</p>
-              <p className="text-sm"><strong>Phone:</strong> {(Array.isArray(printData.data) ? printData.data[0] : (printData.data as Order)).customerInfo?.phone || ((Array.isArray(printData.data) ? printData.data[0] : printData.data) as any).phone || 'N/A'}</p>
-              <p className="text-sm"><strong>Address:</strong> {(Array.isArray(printData.data) ? printData.data[0] : (printData.data as Order)).customerInfo?.address || 'No Address Provided'}</p>
-              <p className="text-sm"><strong>Payment:</strong> {((Array.isArray(printData.data) ? printData.data[0] : (printData.data as Order)).customerInfo?.paymentMethod || ((Array.isArray(printData.data) ? printData.data[0] : printData.data) as any).gateway || 'N/A').toUpperCase()}</p>
+              <p className="font-bold text-sm uppercase mb-1 border-b pb-1">Customer Information</p>
+              <p className="text-sm"><strong>Name:</strong> {
+                printData.type === 'online' 
+                  ? ((Array.isArray(printData.data) ? printData.data[0] : (printData.data as Order)).customerInfo?.name || 'Unknown')
+                  : ((printData.data as OfflineSale).customerName || 'Walk-in Partner')
+              }</p>
+              <p className="text-sm"><strong>Phone:</strong> {
+                printData.type === 'online'
+                  ? ((Array.isArray(printData.data) ? printData.data[0] : (printData.data as Order)).customerInfo?.phone || 'N/A')
+                  : ((printData.data as OfflineSale).customerPhone || 'N/A')
+              }</p>
+              {printData.type === 'online' && (
+                <p className="text-sm"><strong>Address:</strong> {(Array.isArray(printData.data) ? printData.data[0] : (printData.data as Order)).customerInfo?.address || 'No Address Provided'}</p>
+              )}
+              {printData.type === 'offline' && (printData.data as OfflineSale).customerLocation && (
+                <p className="text-sm"><strong>Location:</strong> {(printData.data as OfflineSale).customerLocation}</p>
+              )}
+              {printData.type === 'offline' && (printData.data as OfflineSale).deliveryHand && (
+                <p className="text-sm"><strong>Delivery Hand:</strong> {(printData.data as OfflineSale).deliveryHand}</p>
+              )}
+              <p className="text-sm"><strong>Payment:</strong> {
+                printData.type === 'online'
+                  ? ((Array.isArray(printData.data) ? printData.data[0] : (printData.data as Order)).customerInfo?.paymentMethod || 'Cash on Delivery').toUpperCase()
+                  : 'CASH ON DELIVERY'
+              }</p>
             </div>
           )}
 
@@ -249,16 +414,64 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
   const [unit, setUnit] = useState<OfflineSale['unit']>('KG');
   const [qty, setQty] = useState<number | ''>('');
   const [unitPrice, setUnitPrice] = useState<number | ''>('');
+  
+  // Custom Customer parameters
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerLocation, setCustomerLocation] = useState('');
+  const [deliveryHand, setDeliveryHand] = useState('');
+
+  // Lifetime search & filters states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDateStr, setStartDateStr] = useState('');
+  const [endDateStr, setEndDateStr] = useState('');
 
   const total = (Number(qty) || 0) * (Number(unitPrice) || 0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!brand || !itemName || !qty || !unitPrice) return;
-    addOfflineSale({ brand, itemName, unit, qty: Number(qty), unitPrice: Number(unitPrice), total });
+    addOfflineSale({ 
+      brand, 
+      itemName, 
+      unit, 
+      qty: Number(qty), 
+      unitPrice: Number(unitPrice), 
+      total,
+      customerName: customerName.trim() || undefined,
+      customerPhone: customerPhone.trim() || undefined,
+      customerLocation: customerLocation.trim() || undefined,
+      deliveryHand: deliveryHand.trim() || undefined
+    });
     setItemName('');
     setQty('');
     setUnitPrice('');
+    setCustomerName('');
+    setCustomerPhone('');
+    setCustomerLocation('');
+    setDeliveryHand('');
+  };
+
+  const handlePrintMemoPreSubmit = () => {
+    if (!brand || !itemName || !qty || !unitPrice) {
+      alert("Please fill out the brand, item description, quantity, and unit price fields before printing the memo or downloading the PDF!");
+      return;
+    }
+    const tempSale: OfflineSale = {
+      id: `sale-PREVIEW`,
+      brand,
+      itemName,
+      unit,
+      qty: Number(qty),
+      unitPrice: Number(unitPrice),
+      total,
+      timestamp: Date.now(),
+      customerName: customerName.trim() || undefined,
+      customerPhone: customerPhone.trim() || undefined,
+      customerLocation: customerLocation.trim() || undefined,
+      deliveryHand: deliveryHand.trim() || undefined
+    };
+    onPrint(tempSale);
   };
 
   const now = new Date();
@@ -307,8 +520,34 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
     </div>
   );
 
+  const filteredLifetimeSales = offlineSales.filter(sale => {
+    const matchSearch = searchTerm.trim() === '' || [
+      sale.customerName?.toLowerCase() || '',
+      sale.customerPhone || '',
+      sale.itemName.toLowerCase(),
+      sale.brand.toLowerCase()
+    ].some(field => field.includes(searchTerm.toLowerCase()));
+
+    let matchStart = true;
+    if (startDateStr) {
+      const startOfDay = new Date(startDateStr);
+      startOfDay.setHours(0, 0, 0, 0);
+      matchStart = sale.timestamp >= startOfDay.getTime();
+    }
+
+    let matchEnd = true;
+    if (endDateStr) {
+      const endOfDay = new Date(endDateStr);
+      endOfDay.setHours(23, 59, 59, 999);
+      matchEnd = sale.timestamp <= endOfDay.getTime();
+    }
+
+    return matchSearch && matchStart && matchEnd;
+  });
+
   return (
     <div className="space-y-8 animate-in fade-in zoom-in-95 duration-200">
+      {/* High-Speed Terminal Form */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <div className="flex items-center gap-2 mb-6">
           <div className="w-2 h-6 bg-[#ef4a23] rounded-full"></div>
@@ -317,7 +556,7 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
           <div className="md:col-span-1">
             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Brand</label>
-            <select value={brand} onChange={e => setBrand(e.target.value)} className="w-full border-gray-300 rounded-md bg-gray-50 p-2.5 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none border">
+            <select value={brand} onChange={e => setBrand(e.target.value)} className="w-full border-gray-300 rounded-md bg-gray-50 p-2.5 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none border font-semibold border-gray-200">
                {brands.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>
@@ -339,27 +578,208 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
                 <input type="number" min="0" step="any" value={qty} onChange={e => setQty(e.target.value)} required className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm font-mono focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
              </div>
              <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Price/Unit (৳)</label>
+                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Price/Unit (BDT)</label>
                 <input type="number" min="0" step="any" value={unitPrice} onChange={e => setUnitPrice(e.target.value)} required className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm font-mono focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
              </div>
           </div>
+
+          <div className="md:col-span-3">
+             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Customer Name (Optional)</label>
+             <input placeholder="Enter customer name" value={customerName} onChange={e => setCustomerName(e.target.value)} className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
+          </div>
+          <div className="md:col-span-3">
+             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Customer Phone (Optional)</label>
+             <input placeholder="e.g. 017XXXXXXXX" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm font-mono focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
+          </div>
+          <div className="md:col-span-3">
+             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Customer Location (Optional)</label>
+             <input placeholder="e.g. Batikamari, Gopalganj" value={customerLocation} onChange={e => setCustomerLocation(e.target.value)} className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
+          </div>
+          <div className="md:col-span-3">
+             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Delivery Hand / Driver Name (Optional)</label>
+             <input placeholder="e.g. Kamal Hossain" value={deliveryHand} onChange={e => setDeliveryHand(e.target.value)} className="w-full border-gray-300 border bg-gray-50 rounded-md p-2.5 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none" />
+          </div>
           
-          <div className="md:col-span-6 flex items-center justify-between border-t border-gray-100 pt-6 mt-2">
-            <div className="space-y-1">
+          <div className="md:col-span-6 flex flex-col sm:flex-row items-center justify-between border-t border-gray-100 pt-6 mt-2 gap-4">
+            <div className="space-y-1 w-full sm:w-auto text-center sm:text-left">
                <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Live Calculation</p>
                <p className="text-3xl font-bold font-mono text-[#081621] tracking-tight">৳{total.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
             </div>
             
-            <button type="submit" className="bg-[#ef4a23] hover:bg-[#d83c17] text-white px-8 py-3 rounded-md font-bold shadow-lg shadow-red-500/20 transition-all active:scale-95 flex items-center gap-2">
-              <Plus size={20} /> Add Recorded Entry to Save
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <button 
+                type="button" 
+                onClick={handlePrintMemoPreSubmit}
+                className="bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-md font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 text-sm text-center"
+              >
+                <Printer size={16}/> Print POS Cash Memo
+              </button>
+              <button 
+                type="submit" 
+                className="bg-[#ef4a23] hover:bg-[#d83c17] text-white px-8 py-3 rounded-md font-bold shadow-lg shadow-red-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm text-center"
+              >
+                <Plus size={18} /> Add Recorded Entry to Save
+              </button>
+            </div>
           </div>
         </form>
       </div>
 
+      {/* Daily Sales Boxes split-layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
          <SalesTable sales={todaySales} title="Today's Sales Box" accent="border-[#ef4a23]" />
          <SalesTable sales={yesterdaySales} title={`Yesterday's Sales Box (${formatDate(todayStart - 86400000)})`} accent="border-gray-400" />
+      </div>
+
+      {/* Lifetime Offline Sales History & Advanced Search/Filter System */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50/80">
+          <div>
+            <h3 className="font-bold text-gray-900 flex items-center gap-2">
+              <Database size={18} className="text-[#ef4a23]" /> Lifetime Offline Sales Ledger History
+            </h3>
+            <p className="text-xs text-gray-500 mt-1">Audit and search all historical physical transactions stored permanently in your workstation ledger.</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full">
+              Matched: {filteredLifetimeSales.length} of {offlineSales.length} Entries
+            </span>
+            <span className="text-xs font-mono font-bold text-orange-700 bg-orange-100 px-2.5 py-1 rounded-full">
+              Sum: ৳{filteredLifetimeSales.reduce((sum, s) => sum + s.total, 0).toLocaleString()} BDT
+            </span>
+          </div>
+        </div>
+
+        {/* Filter Controls Pane */}
+        <div className="p-6 border-b border-gray-100 bg-white grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Search Buyer Details or Items</label>
+            <div className="relative">
+              <input 
+                type="text"
+                placeholder="Search by Customer Name, Phone, Brand, or Item..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full border-gray-300 border bg-gray-50 rounded-md py-2 px-3 pl-3 pr-8 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none"
+              />
+              {searchTerm && (
+                <button 
+                  onClick={() => setSearchTerm('')} 
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Start Date</label>
+            <input 
+              type="date"
+              value={startDateStr}
+              onChange={e => setStartDateStr(e.target.value)}
+              className="w-full border-gray-300 border bg-gray-50 rounded-md py-2 px-3 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">End Date</label>
+            <div className="flex gap-2 items-center">
+              <input 
+                type="date"
+                value={endDateStr}
+                onChange={e => setEndDateStr(e.target.value)}
+                className="w-full border-gray-300 border bg-gray-50 rounded-md py-2 px-3 text-sm focus:ring-[#ef4a23] focus:border-[#ef4a23] outline-none flex-grow"
+              />
+              <button 
+                onClick={() => { setSearchTerm(''); setStartDateStr(''); setEndDateStr(''); }}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-extrabold text-xs px-3.5 py-2.5 rounded transition-colors whitespace-nowrap"
+                title="Reset Filters to defaults"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Sales Table list block */}
+        {filteredLifetimeSales.length === 0 ? (
+          <div className="p-12 text-center text-gray-500 bg-white">
+            <p className="font-extrabold text-sm text-gray-800">No matching history entries found!</p>
+            <p className="text-xs mt-1 text-gray-400">Try loosening your search terms or specifying a broader date range.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-[11px] text-gray-600 bg-gray-50 uppercase border-b border-gray-100 font-extrabold tracking-wider">
+                <tr>
+                  <th className="px-6 py-4">Slip Date &amp; Time</th>
+                  <th className="px-6 py-4">Invoice ID</th>
+                  <th className="px-6 py-4">Item details (Brand &amp; Desc)</th>
+                  <th className="px-6 py-4">Customer Details</th>
+                  <th className="px-6 py-4">Logistics Metatags</th>
+                  <th className="px-6 py-4 text-center">Quantity</th>
+                  <th className="px-6 py-4 text-right">Invoice Sum</th>
+                  <th className="px-6 py-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {[...filteredLifetimeSales].reverse().map((s) => (
+                  <tr key={s.id} className="hover:bg-slate-50 transition-colors border-b last:border-0 font-medium text-gray-800 text-xs font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-500 select-all">
+                      <div>{formatDate(s.timestamp)}</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5">{formatTime(s.timestamp)}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="font-mono bg-slate-100 text-slate-800 font-black px-2 py-1 rounded border border-slate-200">
+                        OFF-{String(s.timestamp).slice(-6)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-extrabold text-[#081621]">{s.brand}</div>
+                      <div className="text-gray-500 mt-0.5">{s.itemName}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {s.customerName || s.customerPhone ? (
+                        <div>
+                          <div className="font-black text-gray-800">{s.customerName || 'Walk-in Partner'}</div>
+                          <div className="text-gray-500 mt-0.5 font-mono text-[11px]">{s.customerPhone || 'N/A Phone'}</div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 font-semibold italic text-[11px]">Direct Retail Customer</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 select-text">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] bg-sky-50 text-sky-800 font-extrabold px-1.5 py-0.5 rounded border border-sky-200 tracking-wide">LOCATION:</span>
+                          <span className="text-[10px] text-gray-600 font-medium truncate max-w-[150px]">{s.customerLocation || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[9px] bg-amber-50 text-amber-800 font-extrabold px-1.5 py-0.5 rounded border border-amber-200 tracking-wide">DRIVER / HAND:</span>
+                          <span className="text-[10px] text-gray-600 font-medium truncate max-w-[150px]">{s.deliveryHand || 'N/A'}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-center font-mono font-bold whitespace-nowrap">
+                      {s.qty} <span className="text-gray-400 font-medium text-[10px]">{s.unit}</span>
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono font-extrabold text-[#ef4a23] whitespace-nowrap text-sm">
+                      ৳{s.total.toLocaleString()} BDT
+                    </td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                      <button 
+                        onClick={() => onPrint(s)} 
+                        className="text-[#081621] hover:text-[#ef4a23] hover:border-[#ef4a23] bg-white border border-gray-200 hover:bg-orange-50 px-2.5 py-1.5 rounded shadow-xs font-bold text-xs flex items-center gap-1 ml-auto transition-all"
+                      >
+                        <Printer size={13} /> Print Memo / PDF
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -377,8 +797,39 @@ const OnlineOrders = ({ onPrint }: { onPrint: (order: Order | Order[]) => void }
 
     await updateOrderStatus(orderId, newStatus);
     
-    // Simulate SMS Notification
-    setShowNotification(`SMS Sent to ${phone}: "Your Hasina Traders Order is now ${newStatus}"`);
+    if (newStatus === 'Delivered') {
+      const order = onlineOrders.find(o => o.id === orderId);
+      const cName = order?.customerInfo?.name || 'Customer';
+      const totalAmount = order?.total || 0;
+      const message = `Dear ${cName}, your order #${orderId} of BDT ${totalAmount.toLocaleString()} has been successfully delivered by M/S Hasina Traders! Thank you for purchasing of construction materials from us. For queries, contact +880-1988030534.`;
+      
+      const gatewayUrl = (import.meta as any).env.VITE_SMS_GATEWAY_API_URL || 'https://api.bulksmsbd.com/api/smsapi';
+      const apiToken = (import.meta as any).env.VITE_SMS_GATEWAY_API_TOKEN || '';
+      
+      if (apiToken) {
+        try {
+          console.log(`[SMS Gateway] Sending real delivery notification to: ${phone}...`);
+          await fetch(gatewayUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token: apiToken,
+              to: phone,
+              message: message
+            })
+          });
+          setShowNotification(`Delivered notification sent to ${phone} successfully!`);
+        } catch (err) {
+          console.error('[SMS Gateway Error]', err);
+          setShowNotification(`Delivered! But SMS dispatch failed: ${String(err)}`);
+        }
+      } else {
+        console.log(`[SMS Simulation Mode] to ${phone}: "${message}"`);
+        setShowNotification(`SMS dispatched to ${phone}: "${message}"`);
+      }
+    } else {
+      setShowNotification(`Status updated to ${newStatus}. SMS Sent to ${phone}: "Your Hasina Traders Order is now ${newStatus}"`);
+    }
     setTimeout(() => setShowNotification(''), 5000);
   };
 
@@ -708,7 +1159,7 @@ const BrandManager = () => {
                 <button onClick={() => removeBrand(b)} className="text-gray-400 hover:text-red-500"><Trash2 size={14}/></button>
               </div>
             ))}
-         </div>
+          </div>
        </div>
     </div>
   );
@@ -773,4 +1224,104 @@ const Statistics = () => {
       </div>
     </div>
   )
+};
+
+const QaModeration = () => {
+  const { qas, answerQuestion, products } = useStore();
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+
+  const handleAnswerSubmit = async (qaId: string) => {
+    const ans = answers[qaId];
+    if (!ans || !ans.trim()) return;
+    await answerQuestion(qaId, ans);
+    setAnswers(prev => {
+      const copy = { ...prev };
+      delete copy[qaId];
+      return copy;
+    });
+    alert('Answer posted successfully!');
+  };
+
+  const getProductName = (id: string) => {
+    return products.find(p => p.id === id)?.name || 'Unknown Product';
+  };
+
+  const unanswered = qas.filter(q => !q.answer);
+  const answered = qas.filter(q => !!q.answer);
+
+  return (
+    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          🗣️ Q&A Moderation Dashboard
+        </h2>
+        <p className="text-xs text-gray-500 mb-6">Answer questions asked by customers. Replies will be displayed in real-time on the public storefront.</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Unanswered box */}
+          <div className="bg-white border rounded-lg p-4 shadow-2xs">
+            <h3 className="font-extrabold text-xs uppercase tracking-wider text-amber-600 mb-4 border-b pb-2">
+              Pending Questions ({unanswered.length})
+            </h3>
+            {unanswered.length === 0 ? (
+              <p className="text-xs text-gray-400 py-6 text-center select-none">No new questions pending!</p>
+            ) : (
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                {unanswered.map(q => (
+                  <div key={q.id} className="border border-slate-100 rounded-lg p-3 bg-slate-50/50">
+                    <div className="flex justify-between text-[10px] text-gray-400 font-bold mb-1">
+                      <span className="truncate max-w-[200px]">Product: {getProductName(q.productId)}</span>
+                      <span>{new Date(q.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-xs font-bold text-gray-800 pr-1 mb-2">Questioner ({q.askedBy}): "{q.question}"</p>
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        placeholder="Type your answer..." 
+                        value={answers[q.id] || ''}
+                        onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                        className="bg-white border text-xs rounded px-2.5 py-1.5 outline-none flex-grow focus:border-[#ef4a23]"
+                      />
+                      <button 
+                        onClick={() => handleAnswerSubmit(q.id)}
+                        className="bg-gray-800 hover:bg-[#ef4a23] text-white font-extrabold text-[10px] uppercase px-3 py-1.5 rounded transition-all transition-colors"
+                      >
+                        Submit
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Answered box */}
+          <div className="bg-white border rounded-lg p-4 shadow-2xs">
+            <h3 className="font-extrabold text-xs uppercase tracking-wider text-emerald-600 mb-4 border-b pb-2">
+              Answered Questions ({answered.length})
+            </h3>
+            {answered.length === 0 ? (
+              <p className="text-xs text-gray-400 py-6 text-center select-none">No questions have been answered yet.</p>
+            ) : (
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                {answered.map(q => (
+                  <div key={q.id} className="border border-slate-100 rounded-lg p-3 bg-emerald-50/10">
+                    <div className="flex justify-between text-[10px] text-gray-400 font-bold mb-1">
+                      <span className="truncate max-w-[200px]">Product: {getProductName(q.productId)}</span>
+                      <span>{new Date(q.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-xs font-semibold text-gray-700">Q: "{q.question}"</p>
+                    <div className="mt-2 bg-emerald-50/30 p-2 rounded text-xs select-text">
+                      <strong className="text-[#ef4a23] text-[9px] uppercase tracking-wide">Answer:</strong>
+                      <p className="text-xs font-medium text-gray-850 mt-0.5">{q.answer}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
