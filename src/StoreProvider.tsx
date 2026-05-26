@@ -55,7 +55,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Auth Listener
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       // For this app, only TAMIM is admin. We check if the Google Account matches the preconfigured one.
-      const isAdmin = !!(user && user.emailVerified && user.email === 'sanajidul.muhsinin.tamim@gmail.com');
+      const isAdmin = !!(user && user.emailVerified && (user.email === 'sanajidul.muhsinin.tamim@gmail.com' || user.email === 'babul28111979@gmail.com'));
       setState(s => ({ ...s, currentUser: user, isAdminAuth: isAdmin }));
     });
 
@@ -178,7 +178,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addOfflineSale = async (sale: Omit<OfflineSale, 'id' | 'timestamp'>) => {
     const id = `sale-${Date.now()}`;
     try {
-      await setDoc(doc(db, 'offlineSales', id), { ...sale, timestamp: Date.now() });
+      // Remove any undefined keys to secure against Firestore document compile exceptions
+      const cleanSale: any = {};
+      Object.keys(sale).forEach(key => {
+        const val = (sale as any)[key];
+        if (val !== undefined) {
+          cleanSale[key] = val;
+        }
+      });
+      await setDoc(doc(db, 'offlineSales', id), { ...cleanSale, timestamp: Date.now() });
     } catch(e) { handleFirestoreError(e, OperationType.WRITE, `offlineSales/${id}`); }
   };
 

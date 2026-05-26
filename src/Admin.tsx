@@ -29,7 +29,11 @@ export const AdminLogin = ({ onOpenStore }: { onOpenStore: () => void }) => {
         {error && <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm font-medium">{error}</div>}
         <div className="mb-6 text-center text-sm text-gray-600">
           <p>Login securely with your Google Account.</p>
-          <p className="mt-2 text-xs font-mono bg-gray-100 p-2 rounded">Authorized: sanajidul.muhsinin.tamim@gmail.com</p>
+          <div className="mt-2 text-[11px] font-mono bg-gray-100 p-2.5 rounded text-left space-y-1">
+            <p className="font-bold text-gray-500 uppercase tracking-wider text-[9px] mb-1">Authorized Admins:</p>
+            <p className="truncate">✓ sanajidul.muhsinin.tamim@gmail.com</p>
+            <p className="truncate">✓ babul28111979@gmail.com</p>
+          </div>
         </div>
         <button type="submit" className="w-full bg-[#ef4a23] hover:bg-red-600 text-white py-3 rounded font-semibold transition-colors flex justify-center items-center gap-2">
           Sign In with Google
@@ -509,7 +513,7 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
 };
 
 const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
-  const { brands, units, addOfflineSale, offlineSales, addBrand, addUnit } = useStore();
+  const { products, brands, units, addOfflineSale, offlineSales, addBrand, addUnit } = useStore();
   
   // State for line items array
   const [items, setItems] = useState<Array<{
@@ -531,6 +535,68 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
       total: 0
     }
   ]);
+
+  // Autocomplete support states for item descriptions
+  const [activeSugRow, setActiveSugRow] = useState<number | null>(null);
+  const [sugSearchText, setSugSearchText] = useState<string>('');
+
+  // Extract suggestions from both the live web storefront catalog and lifetime historical sales sheets
+  const itemSuggestions = useMemo(() => {
+    const list: Array<{ productId: string; name: string; brand: string; unitPrice: number; unit: string; isCustom?: boolean }> = [];
+    
+    // 1. Live storefront products
+    if (products) {
+      products.forEach(p => {
+        const catLower = (p.category || '').toLowerCase();
+        const defaultUnit = catLower.includes('cement') ? 'Bag' : (catLower.includes('rod') || catLower.includes('steel') ? 'KG' : 'Pcs');
+        list.push({
+          productId: p.id,
+          name: p.name,
+          brand: p.brand || (brands && brands[0]) || 'Generic',
+          unitPrice: p.salePrice || p.regularPrice || 0,
+          unit: defaultUnit,
+          isCustom: false
+        });
+      });
+    }
+
+    // 2. Load unique historic item descriptions to satisfy "save for the future" requirement
+    const namesSeen = new Set<string>(list.map(x => x.name.toLowerCase().trim()));
+    if (offlineSales) {
+      offlineSales.forEach(sale => {
+        if (sale.items) {
+          sale.items.forEach(item => {
+            const norm = (item.name || '').toLowerCase().trim();
+            if (norm && !namesSeen.has(norm)) {
+              namesSeen.add(norm);
+              list.push({
+                productId: item.productId || ('custom-' + Date.now() + Math.random().toString(36).substr(2, 4)),
+                name: item.name,
+                brand: item.brand,
+                unitPrice: item.unitPrice,
+                unit: item.unit || 'KG',
+                isCustom: true
+              });
+            }
+          });
+        }
+      });
+    }
+
+    return list;
+  }, [products, offlineSales, brands]);
+
+  // Filter recommendations matching the user's typed input
+  const filteredSuggestions = useMemo(() => {
+    const query = sugSearchText.toLowerCase().trim();
+    if (!query) {
+      return itemSuggestions.slice(0, 10); // Show initial default list
+    }
+    return itemSuggestions.filter(sug => 
+      (sug.name || '').toLowerCase().includes(query) || 
+      (sug.brand || '').toLowerCase().includes(query)
+    ).slice(0, 12);
+  }, [itemSuggestions, sugSearchText]);
 
   // Customer identification card parameters
   const [customerName, setCustomerName] = useState('');
@@ -647,64 +713,74 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check mandatory customer identification inputs
-    if (!customerLocation.trim()) {
-      alert("Validation Failed: Customer Delivery Location is mandatory!");
-      return;
-    }
-    if (!deliveryHand.trim()) {
-      alert("Validation Failed: Delivery Hand / Driver Name is mandatory!");
-      return;
-    }
-
-    // Check row item valid bounds
-    const invalidItem = items.find(item => !item.name.trim() || !item.qty || !item.unitPrice);
-    if (invalidItem) {
-      alert("Validation Failed: One or more rows have empty description, quantity, or rate!");
-      return;
-    }
-
-    const compiledItems = items.map(item => ({
-      productId: item.productId,
-      name: item.name.trim(),
-      brand: item.brand,
-      qty: Number(item.qty),
-      unit: item.unit,
-      unitPrice: Number(item.unitPrice),
-      total: item.total
-    }));
-
-    await addOfflineSale({
-      items: compiledItems,
-      subtotal,
-      discount: discountValue,
-      discountCode: appliedCoupon || undefined,
-      total,
-      customerName: customerName.trim() || undefined,
-      customerPhone: customerPhone.trim() || undefined,
-      customerLocation: customerLocation.trim(),
-      deliveryHand: deliveryHand.trim()
-    });
-
-    // Reset components to pristine fresh status state
-    setItems([
-      {
-        productId: 'custom-' + Date.now(),
-        name: '',
-        brand: brands[0] || 'BSRM',
-        qty: '',
-        unit: (units && units[0]) || 'KG',
-        unitPrice: '',
-        total: 0
+    try {
+      // Check mandatory customer identification inputs
+      if (!customerLocation.trim()) {
+        alert("Validation Failed: Customer Delivery Location is mandatory!");
+        return;
       }
-    ]);
-    setCustomerName('');
-    setCustomerPhone('');
-    setCustomerLocation('');
-    setDeliveryHand('');
-    setDiscountCode('');
-    setDiscountValue(0);
-    setAppliedCoupon('');
+      if (!deliveryHand.trim()) {
+        alert("Validation Failed: Delivery Hand / Driver Name is mandatory!");
+        return;
+      }
+
+      // Check row item valid bounds
+      const invalidItem = items.find(item => !item.name.trim() || !item.qty || !item.unitPrice);
+      if (invalidItem) {
+        alert("Validation Failed: One or more rows have empty description, quantity, or rate!");
+        return;
+      }
+
+      const compiledItems = items.map(item => ({
+        productId: item.productId,
+        name: item.name.trim(),
+        brand: item.brand,
+        qty: Number(item.qty),
+        unit: item.unit,
+        unitPrice: Number(item.unitPrice),
+        total: item.total
+      }));
+
+      const salePayload: any = {
+        items: compiledItems,
+        subtotal,
+        discount: discountValue,
+        total,
+        customerLocation: customerLocation.trim(),
+        deliveryHand: deliveryHand.trim()
+      };
+      
+      if (appliedCoupon) salePayload.discountCode = appliedCoupon;
+      if (customerName.trim()) salePayload.customerName = customerName.trim();
+      if (customerPhone.trim()) salePayload.customerPhone = customerPhone.trim();
+
+      await addOfflineSale(salePayload);
+
+      // Reset components to pristine fresh status state
+      setItems([
+        {
+          productId: 'custom-' + Date.now(),
+          name: '',
+          brand: brands[0] || 'BSRM',
+          qty: '',
+          unit: (units && units[0]) || 'KG',
+          unitPrice: '',
+          total: 0
+        }
+      ]);
+      setCustomerName('');
+      setCustomerPhone('');
+      setCustomerLocation('');
+      setDeliveryHand('');
+      setDiscountCode('');
+      setDiscountValue(0);
+      setAppliedCoupon('');
+      
+      alert("✅ Success: Recorded Cash Transaction Sheet successfully added to DB!");
+    } catch (err: any) {
+      console.error("POS database registration failure: ", err);
+      alert(`❌ Failed to save transaction sheet: ${err.message || 'Unknown database write error'}`);
+    }
   };
 
   const handlePrintMemoPreSubmit = () => {
@@ -910,7 +986,7 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
           </div>
 
           {/* Dynamic Item Invoice Rows Table Section */}
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="border border-gray-200 rounded-lg overflow-visible">
             <table className="w-full text-sm text-left">
               <thead className="bg-[#081621] text-white text-xs uppercase font-extrabold tracking-wide">
                 <tr>
@@ -935,15 +1011,68 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
                         {brands.map(b => <option key={b} value={b}>{b}</option>)}
                       </select>
                     </td>
-                    <td className="p-2">
+                    <td className="p-2 relative">
                       <input 
                         type="text" 
                         placeholder="e.g. 16mm Steel Rod (BSRM-500W-grade)" 
                         value={item.name} 
-                        onChange={e => handleUpdateRow(idx, 'name', e.target.value)}
+                        onChange={e => {
+                          handleUpdateRow(idx, 'name', e.target.value);
+                          setSugSearchText(e.target.value);
+                        }}
+                        onFocus={() => {
+                          setActiveSugRow(idx);
+                          setSugSearchText(item.name);
+                        }}
+                        onBlur={() => {
+                          // Slight timeout to let onMouseDown register before unmounting
+                          setTimeout(() => {
+                            setActiveSugRow(null);
+                          }, 250);
+                        }}
                         required
                         className="w-full border border-gray-300 rounded p-1.5 text-xs outline-none focus:border-[#ef4a23]" 
+                        autoComplete="off"
                       />
+                      
+                      {activeSugRow === idx && filteredSuggestions.length > 0 && (
+                        <div className="absolute left-1 right-1 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-56 overflow-y-auto z-50 divide-y divide-gray-100">
+                          {filteredSuggestions.map((sug, sIdx) => (
+                            <button
+                              key={sIdx}
+                              type="button"
+                              onMouseDown={(e) => {
+                                // Prevent default input blur before our handler processes the select action
+                                e.preventDefault(); 
+                                const updated = [...items];
+                                const currentQty = Number(updated[idx].qty) || 0;
+                                updated[idx] = {
+                                  productId: sug.productId,
+                                  name: sug.name,
+                                  brand: brands.includes(sug.brand) ? sug.brand : (brands[0] || 'BSRM'),
+                                  qty: currentQty || '',
+                                  unit: units.includes(sug.unit) ? sug.unit : (units[0] || 'KG'),
+                                  unitPrice: sug.unitPrice,
+                                  total: Number((currentQty * sug.unitPrice).toFixed(2))
+                                };
+                                setItems(updated);
+                                setActiveSugRow(null);
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs hover:bg-orange-50 hover:text-orange-950 flex justify-between items-center transition-colors"
+                            >
+                              <div className="flex flex-col min-w-0 pr-2">
+                                <span className="font-bold text-slate-800 truncate">{sug.name}</span>
+                                <span className="text-[10px] text-gray-400 font-medium">
+                                  Brand: <span className="text-gray-600 font-semibold">{sug.brand}</span> {sug.isCustom ? '• (Custom/Prev POS)' : '• (Website Catalog)'}
+                                </span>
+                              </div>
+                              <span className="text-xs font-mono font-black text-[#ef4a23] shrink-0 bg-orange-50 px-1.5 py-0.5 rounded">
+                                ৳{sug.unitPrice}/{sug.unit}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="p-2">
                       <select 
