@@ -1637,11 +1637,23 @@ const OnlineOrders = ({ onPrint }: { onPrint: (order: Order | Order[]) => void }
 };
 
 const ProductManager = () => {
-  const { products, brands, categories, addProduct, updateProduct, deleteProduct } = useStore();
+  const { products, brands, categories, units, addProduct, updateProduct, deleteProduct, addUnit } = useStore();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [productUnitModal, setProductUnitModal] = useState(false);
+  const [newProductUnit, setNewProductUnit] = useState('');
 
-  const InitialState = { name: '', brand: brands[0] || '', category: categories[0] || '', description: '', regularPrice: '', salePrice: '', availability: 'In Stock' as const, imageUrl: '' };
+  const InitialState = { 
+    name: '', 
+    brand: brands[0] || '', 
+    category: categories[0] || '', 
+    description: '', 
+    regularPrice: '', 
+    salePrice: '', 
+    availability: 'In Stock' as const, 
+    imageUrl: '',
+    unit: units && units[0] ? units[0] : 'KG'
+  };
   const [form, setForm] = useState(InitialState);
 
   const startEdit = (p: Product) => {
@@ -1653,7 +1665,8 @@ const ProductManager = () => {
       regularPrice: p.regularPrice.toString(),
       salePrice: p.salePrice.toString(),
       availability: p.availability,
-      imageUrl: p.imageUrl
+      imageUrl: p.imageUrl,
+      unit: p.unit || (units && units[0] ? units[0] : 'KG')
     });
     setEditingId(p.id);
     setIsAdding(true);
@@ -1785,6 +1798,62 @@ const ProductManager = () => {
              <button type="submit" className="bg-[#ef4a23] text-white px-6 py-2 rounded font-semibold hover:bg-red-600 transition-colors">{editingId ? 'Update Product' : 'Publish Product'}</button>
           </div>
         </form>
+      )}
+
+      {/* DYNAMIC PRODUCT UNIT ADD MODAL */}
+      {productUnitModal && (
+        <div className="fixed inset-0 bg-[#081621]/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200 p-4">
+          <div className="bg-white rounded-lg shadow-xl border border-gray-200 max-w-sm w-full p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+              <h3 className="font-extrabold text-[#081621] text-sm flex items-center gap-1">
+                <Plus size={16} className="text-[#ef4a23]" /> Create New Product Unit
+              </h3>
+              <button 
+                type="button"
+                onClick={() => { setProductUnitModal(false); setNewProductUnit(''); }}
+                className="text-gray-400 hover:text-gray-650 text-sm font-bold p-1 rounded hover:bg-gray-105"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 mb-1 uppercase tracking-wider">Unit Name <span className="text-red-500">*</span></label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Bundle, CFT, Box, Piece" 
+                  value={newProductUnit} 
+                  onChange={e => setNewProductUnit(e.target.value)} 
+                  required
+                  className="w-full border border-gray-300 rounded p-2 text-sm outline-none focus:border-[#ef4a23]"
+                />
+              </div>
+              <div className="flex justify-end gap-2 border-t border-gray-100 pt-3">
+                <button 
+                  type="button" 
+                  onClick={() => { setProductUnitModal(false); setNewProductUnit(''); }}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs px-4 py-2 rounded"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  onClick={async () => {
+                    const clean = newProductUnit.trim();
+                    if (!clean) return;
+                    await addUnit(clean);
+                    setForm(f => ({ ...f, unit: clean }));
+                    setNewProductUnit('');
+                    setProductUnitModal(false);
+                  }}
+                  className="bg-[#ef4a23] hover:bg-red-650 text-white font-bold text-xs px-5 py-2 rounded shadow-md"
+                >
+                  Add Unit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
