@@ -47,12 +47,18 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
   const handleDownloadPDF = async () => {
     if (!printData) return;
     
-    // Standard portrait A4 specifications
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    }) as any;
+    try {
+      // ESM-safe runtime resolution for bundler variations
+      const jsPDFClass = (jsPDF as any).jsPDF || jsPDF;
+      if (!jsPDFClass) {
+        throw new Error("The jsPDF constructor was not resolved correctly from imports.");
+      }
+
+      const doc = new jsPDFClass({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      }) as any;
     
     let entityTitle = "";
     let invoiceId = "";
@@ -137,7 +143,18 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
 
     if (printData.type === 'offline') {
       const sale = printData.data as OfflineSale;
-      tableBody = sale.items.map(item => [
+      const saleItems = sale.items || [
+        {
+          productId: 'custom-old',
+          name: (sale as any).itemName || 'Old Sale',
+          brand: (sale as any).brand || 'Generic',
+          qty: (sale as any).qty || 0,
+          unit: (sale as any).unit || 'KG',
+          unitPrice: (sale as any).unitPrice || (sale as any).total || 0,
+          total: sale.total || 0
+        }
+      ];
+      tableBody = saleItems.map(item => [
         item.name,
         item.brand,
         `BDT ${item.unitPrice.toLocaleString()}`,
@@ -261,6 +278,10 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
     }
     
     doc.save(docName);
+    } catch (e: any) {
+      console.error("PDF generation or save error: ", e);
+      alert(`PDF Generation failed: ${e.message || "Unknown error"}`);
+    }
   };
 
   const navItems = [
@@ -274,7 +295,7 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12 flex flex-col">
-      <header className="bg-[#081621] text-white p-4 shadow-lg flex justify-between items-center sticky top-0 z-40">
+      <header className="bg-[#081621] text-white p-4 shadow-lg flex justify-between items-center sticky top-0 z-40 print:hidden">
         <div className="flex items-center gap-3">
           <div className="bg-white/10 p-2 rounded-lg"><Database size={20} className="text-[#ef4a23]"/></div>
           <h1 className="font-bold text-xl tracking-tight">System Admin <span className="text-xs font-normal text-gray-400 block -mt-1">M/S Hasina Traders</span></h1>
@@ -335,7 +356,7 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
 
       {/* PRINTABLE INVOICE TEMPLATE (Hidden from screen, displayed on print) */}
       {printData && (
-        <div id="printable-invoice" className="w-full max-w-3xl mx-auto p-4 bg-white text-black font-sans leading-relaxed border my-8 shadow-xl">
+        <div id="printable-invoice" className="w-full max-w-3xl mx-auto p-4 bg-white text-black font-sans leading-relaxed border my-8 shadow-xl print:border-0 print:shadow-none print:my-0 print:p-0 print:max-w-none">
           <div className="text-center mb-6 pb-4 border-b-2 border-gray-800">
             <h1 className="text-2xl font-bold bg-gray-100 py-1 mb-3 rounded-md border border-gray-300 w-1/4 mx-auto uppercase tracking-widest">CASH MEMO</h1>
             <h2 className="text-4xl font-black mb-1">মেসার্স হাসিনা ট্রেডার্স</h2>
@@ -403,17 +424,31 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
               </tr>
             </thead>
             <tbody>
-              {printData.type === 'offline' && (printData.data as OfflineSale).items.map((item, idx) => (
-                <tr key={idx}>
-                  <td className="border border-gray-800 px-3 py-2 text-center">{idx + 1}</td>
-                  <td className="border border-gray-800 px-3 py-2">
-                    <span className="font-bold opacity-75">{item.brand}</span> - {item.name}
-                  </td>
-                  <td className="border border-gray-800 px-3 py-2 text-center">{item.qty} {item.unit}</td>
-                  <td className="border border-gray-800 px-3 py-2 text-center">{item.unitPrice.toLocaleString()}</td>
-                  <td className="border border-gray-800 px-3 py-2 text-right font-bold">{item.total.toLocaleString()}</td>
-                </tr>
-              ))}
+              {printData.type === 'offline' && (() => {
+                const sale = printData.data as OfflineSale;
+                const saleItems = sale.items || [
+                  {
+                    productId: 'custom-old',
+                    name: (sale as any).itemName || 'Old Sale',
+                    brand: (sale as any).brand || 'Generic',
+                    qty: (sale as any).qty || 0,
+                    unit: (sale as any).unit || 'KG',
+                    unitPrice: (sale as any).unitPrice || (sale as any).total || 0,
+                    total: sale.total || 0
+                  }
+                ];
+                return saleItems.map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="border border-gray-800 px-3 py-2 text-center">{idx + 1}</td>
+                    <td className="border border-gray-800 px-3 py-2">
+                      <span className="font-bold opacity-75">{item.brand}</span> - {item.name}
+                    </td>
+                    <td className="border border-gray-800 px-3 py-2 text-center">{item.qty} {item.unit}</td>
+                    <td className="border border-gray-800 px-3 py-2 text-center">{item.unitPrice.toLocaleString()}</td>
+                    <td className="border border-gray-800 px-3 py-2 text-right font-bold">{item.total.toLocaleString()}</td>
+                  </tr>
+                ));
+              })()}
               {printData.type === 'online' && (Array.isArray(printData.data) ? printData.data.flatMap(o => o.items) : (printData.data as Order).items).map((item, idx) => {
                 const name = item.product?.name || (item as any).name || 'Unknown Item';
                 const qty = item.quantity || (item as any).cartQty || 1;
@@ -736,25 +771,38 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {sales.map(s => (
-              <tr key={s.id} className="hover:bg-blue-50/30 transition-colors">
-                <td className="px-6 py-3 whitespace-nowrap text-gray-400 font-mono text-xs">{formatTime(s.timestamp)}</td>
-                <td className="px-6 py-3 text-gray-800">
-                  <div className="font-semibold text-[#081621] truncate max-w-[280px]">
-                    {s.items.map(item => `${item.brand} - ${item.name}`).join(', ')}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Client: {s.customerName || 'Walk-in Partner'} ({s.customerPhone || 'Direct phone N/A'})
-                  </div>
-                </td>
-                <td className="px-6 py-3 font-mono font-bold text-[#ef4a23] space-x-1 whitespace-nowrap">৳{s.total.toLocaleString()} BDT</td>
-                <td className="px-6 py-3 text-right">
-                  <button onClick={() => onPrint(s)} className="text-gray-500 hover:text-blue-600 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm text-xs font-semibold flex items-center gap-1 ml-auto">
-                    <Printer size={12}/> Print
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {sales.map(s => {
+              const saleItems = s.items || [
+                {
+                  productId: 'custom-old',
+                  name: (s as any).itemName || 'Old Sale',
+                  brand: (s as any).brand || 'Generic',
+                  qty: (s as any).qty || 0,
+                  unit: (s as any).unit || 'KG',
+                  unitPrice: (s as any).unitPrice || (s as any).total || 0,
+                  total: s.total || 0
+                }
+              ];
+              return (
+                <tr key={s.id} className="hover:bg-blue-50/30 transition-colors">
+                  <td className="px-6 py-3 whitespace-nowrap text-gray-400 font-mono text-xs">{formatTime(s.timestamp)}</td>
+                  <td className="px-6 py-3 text-gray-800">
+                    <div className="font-semibold text-[#081621] truncate max-w-[280px]">
+                      {saleItems.map(item => `${item.brand} - ${item.name}`).join(', ')}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Client: {s.customerName || 'Walk-in Partner'} ({s.customerPhone || 'Direct phone N/A'})
+                    </div>
+                  </td>
+                  <td className="px-6 py-3 font-mono font-bold text-[#ef4a23] space-x-1 whitespace-nowrap">৳{s.total.toLocaleString()} BDT</td>
+                  <td className="px-6 py-3 text-right">
+                    <button onClick={() => onPrint(s)} className="text-gray-500 hover:text-blue-600 bg-white border border-gray-200 px-2 py-1 rounded shadow-sm text-xs font-semibold flex items-center gap-1 ml-auto">
+                      <Printer size={12}/> Print
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
@@ -1137,7 +1185,17 @@ const OffilePOS = ({ onPrint }: { onPrint: (sale: OfflineSale) => void }) => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="space-y-1">
-                        {s.items.map((item, idx) => (
+                        {(s.items || [
+                          {
+                            productId: 'custom-old',
+                            name: (s as any).itemName || 'Old Sale',
+                            brand: (s as any).brand || 'Generic',
+                            qty: (s as any).qty || 0,
+                            unit: (s as any).unit || 'KG',
+                            unitPrice: (s as any).unitPrice || (s as any).total || 0,
+                            total: s.total || 0
+                          }
+                        ]).map((item, idx) => (
                           <div key={idx} className="text-xs">
                             <span className="font-extrabold text-[#081621]">{item.brand}:</span> {item.name}{' '}
                             <span className="text-gray-400 font-mono text-[10px]">({item.qty} {item.unit} @ BDT {item.unitPrice})</span>
@@ -1670,12 +1728,25 @@ const Statistics = () => {
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const todayOffline = offlineSales.filter(s => s.timestamp >= todayStart);
 
-  // Group by brand logic for offline today
+  // Group by brand and item logic for offline today
   const offlineBreakdown = todayOffline.reduce((acc, sale) => {
-    const key = `${sale.brand} - ${sale.itemName}`;
-    if (!acc[key]) acc[key] = { qty: 0, revenue: 0, unit: sale.unit };
-    acc[key].qty += sale.qty;
-    acc[key].revenue += sale.total;
+    const saleItems = sale.items || [
+      {
+        name: (sale as any).itemName || 'Old Sale',
+        brand: (sale as any).brand || 'Generic',
+        qty: (sale as any).qty || 0,
+        unit: (sale as any).unit || 'KG',
+        total: sale.total || 0
+      }
+    ];
+
+    saleItems.forEach(item => {
+      const key = `${item.brand} - ${item.name}`;
+      if (!acc[key]) acc[key] = { qty: 0, revenue: 0, unit: item.unit };
+      acc[key].qty += Number(item.qty) || 0;
+      acc[key].revenue += Number(item.total) || 0;
+    });
+
     return acc;
   }, {} as Record<string, {qty: number, revenue: number, unit: string}>);
 
