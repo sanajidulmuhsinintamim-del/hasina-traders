@@ -54,8 +54,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     // Auth Listener
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      // For this app, only TAMIM is admin. We check if the Google Account matches the preconfigured one.
-      const isAdmin = !!(user && user.emailVerified && (user.email === 'sanajidul.muhsinin.tamim@gmail.com' || user.email === 'babul28111979@gmail.com'));
+      // For this app, only TAMIM and BABUL are admins. We check if the Google Account matches the preconfigured one.
+      let isAdmin = false;
+      if (user && user.emailVerified && user.email) {
+        const normEmail = user.email.toLowerCase().replace(/\s+/g, '');
+        const rawEmail = user.email.toLowerCase();
+        isAdmin = normEmail === 'sanajidul.muhsinin.tamim@gmail.com' ||
+                  normEmail === 'babul28111979@gmail.com' ||
+                  rawEmail === 'babul 28111979@gmail.com' ||
+                  rawEmail === 'babul28111979@gmail.com';
+      }
       setState(s => ({ ...s, currentUser: user, isAdminAuth: isAdmin }));
     });
 

@@ -11,7 +11,9 @@ service cloud.firestore {
     function existing() { return resource.data; }
     function isAdmin() { 
       return request.auth != null && 
-             request.auth.token.email == "sanajidul.muhsinin.tamim@gmail.com";
+             (request.auth.token.email == "sanajidul.muhsinin.tamim@gmail.com" ||
+              request.auth.token.email == "babul28111979@gmail.com" ||
+              request.auth.token.email == "babul 28111979@gmail.com");
     }
     
     function isValidProduct(data) {
