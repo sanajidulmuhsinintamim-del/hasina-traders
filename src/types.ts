@@ -9,6 +9,7 @@ export interface Product {
   availability: 'In Stock' | 'Pre Order' | 'Upcoming';
   imageUrl: string;
   createdAt: number;
+  unit?: string;
 }
 
 export interface OfflineSaleItem {

@@ -267,35 +267,6 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
     setTimeout(() => setShowNotification(''), 5000);
   };
 
-  // Dynamic Unit pricing conversion matrix tailored for Bangladeshi construction supplies
-  const getUnitConversions = (product: Product) => {
-    const price = product.salePrice;
-    const cat = (product.category || '').toLowerCase();
-    
-    if (cat.includes('rod') || cat.includes('steel') || cat.includes('iron')) {
-      return [
-        { unit: '1 KG', desc: 'Retail price per KG', price: price },
-        { unit: '1 Bundle (50 KG)', desc: 'Bundle price', price: price * 50 },
-        { unit: '1 Ton (1000 KG)', desc: 'Mega Project wholesale rate', price: price * 1000 }
-      ];
-    } else if (cat.includes('cement')) {
-      return [
-        { unit: '1 Bag (50 KG)', desc: 'Retail price per bag', price: price },
-        { unit: '1 Ton (20 Bags)', desc: 'Wholesale project rate', price: price * 20 }
-      ];
-    } else if (cat.includes('brick')) {
-      return [
-        { unit: '1 Piece', desc: 'Price per item', price: price },
-        { unit: '1000 Pieces', desc: 'Truck load wholesale rate', price: price * 1000 }
-      ];
-    }
-    return [
-      { unit: '1 Unit', desc: 'Retail price', price: price },
-      { unit: '10 Units Pack', desc: 'Package price for 10 units', price: price * 10 },
-      { unit: '100 Units Carton', desc: 'Wholesale price', price: price * 100 }
-    ];
-  };
-
   // Hover Zoom cursor orientation calculator
   const handleMouseMoveZoom = (e: React.MouseEvent<HTMLDivElement>) => {
     const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
@@ -545,7 +516,7 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                          </div>
                          <div className="text-right">
                            <span className="font-black text-[#ef4a23] text-sm font-mono block">৳{(c.product.salePrice * c.quantity).toLocaleString()}</span>
-                           <span className="text-[9px] text-gray-400 font-bold">৳{c.product.salePrice.toLocaleString()} / {isConstructionRod(c.product) ? 'KG' : 'Pcs'}</span>
+                           <span className="text-[9px] text-gray-400 font-bold">৳{c.product.salePrice.toLocaleString()} ({c.product.unit || (isConstructionRod(c.product) ? 'KG' : 'Pcs')})</span>
                          </div>
                        </div>
                      </div>
@@ -791,12 +762,12 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                          <div className="flex flex-wrap items-baseline gap-4 mt-2">
                            <div className="flex flex-col">
                              <span className="text-xs text-gray-500 font-semibold">Cash Sale Price</span>
-                             <span className="text-2xl font-black text-red-600">৳{selectedProduct.salePrice.toLocaleString()} / {isConstructionRod(selectedProduct) ? 'KG' : 'Pcs'}</span>
+                             <span className="text-2xl font-black text-red-600">৳{selectedProduct.salePrice.toLocaleString()} ({selectedProduct.unit || (isConstructionRod(selectedProduct) ? 'KG' : 'Pcs')})</span>
                            </div>
                            {selectedProduct.regularPrice > selectedProduct.salePrice && (
                              <div className="flex flex-col">
                                <span className="text-xs text-gray-500 font-medium">Regular Price</span>
-                               <span className="text-xs text-gray-400 line-through font-semibold font-mono">৳{selectedProduct.regularPrice.toLocaleString()} / {isConstructionRod(selectedProduct) ? 'KG' : 'Pcs'}</span>
+                               <span className="text-xs text-gray-400 line-through font-semibold font-mono">৳{selectedProduct.regularPrice.toLocaleString()} ({selectedProduct.unit || (isConstructionRod(selectedProduct) ? 'KG' : 'Pcs')})</span>
                              </div>
                            )}
                            {selectedProduct.regularPrice > selectedProduct.salePrice && (
@@ -804,24 +775,6 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                                Special Savings: ৳{(selectedProduct.regularPrice - selectedProduct.salePrice).toLocaleString()}
                              </div>
                            )}
-                         </div>
-                      </div>
-
-                      {/* Construction Unit Conversion Board */}
-                      <div className="bg-amber-50/40 border border-amber-100 rounded-lg p-4">
-                         <h4 className="text-xs font-extrabold text-amber-850 uppercase tracking-wider mb-2 flex items-center gap-1">
-                           📊 Local Unit Conversion Calculator (Dynamic Multipliers)
-                         </h4>
-                         <div className="space-y-1.5">
-                           {getUnitConversions(selectedProduct).map((unit, index) => (
-                             <div key={index} className="flex justify-between items-center text-xs font-semibold py-1 border-b border-dashed border-amber-100/50">
-                               <div className="flex items-center gap-1">
-                                 <span className="text-gray-800">{unit.unit}</span>
-                                 <span className="text-gray-400 font-normal">({unit.desc})</span>
-                                </div>
-                               <span className="font-extrabold font-mono text-gray-900">৳{unit.price.toLocaleString()}</span>
-                             </div>
-                           ))}
                          </div>
                       </div>
                    </div>
@@ -1170,9 +1123,9 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                           
                           <div className="mt-4">
                             <div className="flex items-baseline gap-2 mb-3">
-                              <span className="text-lg font-black text-red-650 font-mono">৳{p.salePrice.toLocaleString()} / {isConstructionRod(p) ? 'KG' : 'Pcs'}</span>
+                              <span className="text-lg font-black text-red-650 font-mono">৳{p.salePrice.toLocaleString()} ({p.unit || (isConstructionRod(p) ? 'KG' : 'Pcs')})</span>
                               {p.regularPrice > p.salePrice && (
-                                <span className="text-xs text-gray-400 line-through font-mono">৳{p.regularPrice.toLocaleString()} / {isConstructionRod(p) ? 'KG' : 'Pcs'}</span>
+                                <span className="text-xs text-gray-400 line-through font-mono">৳{p.regularPrice.toLocaleString()} ({p.unit || (isConstructionRod(p) ? 'KG' : 'Pcs')})</span>
                               )}
                             </div>
                             
@@ -1245,7 +1198,7 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                         <div className="mb-2">
                           <div className="flex flex-col gap-0.5">
                             <span className="text-[11.5px] font-black text-[#ef4a23] font-mono leading-none">
-                              ৳{p.salePrice.toLocaleString()} / {isConstructionRod(p) ? 'KG' : 'Pcs'}
+                              ৳{p.salePrice.toLocaleString()} ({p.unit || (isConstructionRod(p) ? 'KG' : 'Pcs')})
                             </span>
                             <div className="flex items-center gap-1 flex-wrap min-h-[12px]">
                               {p.regularPrice > p.salePrice ? (

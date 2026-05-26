@@ -26,7 +26,8 @@ service cloud.firestore {
              data.salePrice is number &&
              data.availability is string &&
              data.imageUrl is string &&
-             data.createdAt is number;
+             data.createdAt is number &&
+             (!data.keys().hasAny(['unit']) || data.unit is string);
     }
 
     function isValidOfflineSale(data) {

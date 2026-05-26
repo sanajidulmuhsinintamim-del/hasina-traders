@@ -1739,13 +1739,30 @@ const ProductManager = () => {
                   <span className="text-lg font-mono font-bold text-green-600">৳{ (Number(form.regularPrice) || 0) - (Number(form.salePrice) || 0) }</span>
                </div>
             </div>
-            <div>
-               <label className="block text-xs font-semibold text-gray-600 mb-1">Availability</label>
-               <select value={form.availability} onChange={e=>setForm({...form, availability:e.target.value as any})} className="w-full border rounded p-2 text-sm outline-none focus:border-[#ef4a23]">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Availability</label>
+                <select value={form.availability} onChange={e=>setForm({...form, availability:e.target.value as any})} className="w-full border rounded p-2 text-sm outline-none focus:border-[#ef4a23]">
                   <option>In Stock</option>
                   <option>Pre Order</option>
                   <option>Upcoming</option>
-               </select>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1 flex justify-between items-center">
+                  <span>Product Unit</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setProductUnitModal(true)} 
+                    className="text-[10px] text-[#ef4a23] hover:underline font-bold"
+                  >
+                    + Add New Unit
+                  </button>
+                </label>
+                <select value={form.unit} onChange={e=>setForm({...form, unit:e.target.value})} className="w-full border rounded p-2 text-sm outline-none focus:border-[#ef4a23]">
+                  {units.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
             </div>
             <div>
                <label className="block text-xs font-semibold text-gray-600 mb-1">Product Image (Upload)</label>
