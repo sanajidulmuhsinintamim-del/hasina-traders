@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Product, OfflineSale, Order, Review, Qa } from './types';
+import { Product, OfflineSale, Order, Review, Qa, LedgerItem, LedgerHistory } from './types';
 import { DEFAULT_BRANDS, DEFAULT_CATEGORIES, INITIAL_PRODUCTS } from './data';
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
@@ -16,6 +16,8 @@ interface AppState {
   onlineOrders: Order[];
   reviews: Review[];
   qas: Qa[];
+  ledgerItems: LedgerItem[];
+  ledgerHistory: LedgerHistory[];
   isLoaded: boolean;
 }
 
@@ -32,6 +34,11 @@ interface AppContextType extends AppState {
   addReview: (productId: string, rating: number, comment: string) => Promise<void>;
   addQuestion: (productId: string, question: string) => Promise<void>;
   answerQuestion: (qaId: string, answer: string) => Promise<void>;
+  addLedgerItem: (item: Omit<LedgerItem, 'id' | 'createdAt'>) => Promise<void>;
+  updateLedgerItem: (id: string, item: Partial<LedgerItem>) => Promise<void>;
+  deleteLedgerItem: (id: string) => Promise<void>;
+  saveLedgerSnapshot: (note: string, stats: { totalVariants: number, totalStock: number, grandTotal: number, items: { serial: string, name: string, rate: number, stock: number }[] }) => Promise<void>;
+  resetLedgerToNewPresets: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -48,6 +55,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     onlineOrders: [],
     reviews: [],
     qas: [],
+    ledgerItems: [],
+    ledgerHistory: [],
     isLoaded: false
   });
 
@@ -89,6 +98,27 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setState(s => ({ ...s, qas: qs.sort((a, b) => b.createdAt - a.createdAt) }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'qas'));
 
+    // Ledger Items Listener
+    const unsubLedgerItems = onSnapshot(collection(db, 'inventory_ledger'), (snapshot) => {
+      const items = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as LedgerItem));
+      // Sort numerically by serial if possible, otherwise alphabetically
+      items.sort((a, b) => {
+        const aNum = parseFloat(a.serial);
+        const bNum = parseFloat(b.serial);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return aNum - bNum;
+        }
+        return a.serial.localeCompare(b.serial);
+      });
+      setState(s => ({ ...s, ledgerItems: items }));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'inventory_ledger'));
+
+    // Ledger History Listener
+    const unsubLedgerHistory = onSnapshot(collection(db, 'ledger_history'), (snapshot) => {
+      const history = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as LedgerHistory));
+      setState(s => ({ ...s, ledgerHistory: history.sort((a, b) => b.timestamp - a.timestamp) }));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'ledger_history'));
+
     // Settings Listener (Brands/Categories)
     const unsubSettings = onSnapshot(doc(db, 'storeSettings', 'config'), (docSnap) => {
       if (docSnap.exists()) {
@@ -100,10 +130,89 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setState(s => ({ ...s, isLoaded: true }));
     }, (err) => handleFirestoreError(err, OperationType.GET, 'storeSettings/config'));
 
+    // Automatic ledger seeding function if empty
+    const checkAndSeedLedger = async () => {
+      const SEED_LEDGER_PRODUCT_NAMES = [
+        '1" pipe',
+        '1" Elbow',
+        '1" Tee',
+        '1" Nipple',
+        '1" B-Elbow',
+        '1" soket',
+        '1" Adapter',
+        '1" Ball valve',
+        '1" Plug cap',
+        '1"*3/4 R-Tee',
+        '1"*3/4 R-Elbow',
+        '1"*1/2 B-Tee',
+        '1"*1/2 B-Elbow',
+        '1" b socket',
+        '1" R-Socket',
+        '1"*1/2 R-Elbow',
+        '1" Bush',
+        '3/4" pipe',
+        '3/4" Elbow',
+        '3/4" Tee',
+        '3/4" Nipple',
+        '3/4" B-Elbow',
+        '3/4" soket',
+        '3/4" Adapter',
+        '3/4" Ball valve',
+        '3/4" Plug cap',
+        '3/4"*1/2 B-Tee',
+        '3/4"*1/2 R-Tee',
+        '3/4"*1/2 B-Elbow',
+        '3/4"*1/2 R-Elbow',
+        '3/4"*1/2 R-Soket',
+        '1.5" Pipe',
+        '1.5" Elbow',
+        '1.5" Tee',
+        '1.5" Nipple',
+        '1.5" union',
+        '1.5" soket',
+        '1.5" Adapter',
+        '1.5" Ball valve',
+        '1.5" Plug cap',
+        '1.5"*1" Elbow',
+        '1.5"*1" Tee',
+        '1.5"*1" Socket',
+        '1.5"*3/4" -Tee',
+        '1.5"*3/4" Socket',
+        'Thread taped 20 MTR',
+        'Thread taped 10 MTR',
+        '1/2" BALL VALVE',
+        '1/2 Plug Cap'
+      ];
+      try {
+        const snap = await getDocs(collection(db, 'inventory_ledger'));
+        if (snap.empty) {
+          console.log(`Seeding ledger items with ${SEED_LEDGER_PRODUCT_NAMES.length} custom plumbing components...`);
+          for (let i = 0; i < SEED_LEDGER_PRODUCT_NAMES.length; i++) {
+            const name = SEED_LEDGER_PRODUCT_NAMES[i];
+            const serialStr = String(i + 1).padStart(2, '0');
+            const id = `ledger-item-${serialStr}`;
+            await setDoc(doc(db, 'inventory_ledger', id), {
+              serial: serialStr,
+              name: name,
+              rate: 0,
+              stock: 0,
+              createdAt: Date.now() + i
+            });
+          }
+          console.log('Ledger items seeded successfully!');
+        }
+      } catch (err) {
+        console.error('Seeding ledger checking error: ', err);
+      }
+    };
+    checkAndSeedLedger();
+
     return () => {
       unsubProducts();
       unsubReviews();
       unsubQas();
+      unsubLedgerItems();
+      unsubLedgerHistory();
       unsubSettings();
     };
   }, []);
@@ -252,6 +361,134 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } catch(e) { handleFirestoreError(e, OperationType.UPDATE, `qas/${qaId}`); }
   };
 
+  const addLedgerItem = async (item: Omit<LedgerItem, 'id' | 'createdAt'>) => {
+    const id = `ledger-item-${Date.now()}`;
+    const newItem = { ...item, createdAt: Date.now() };
+    try {
+      await setDoc(doc(db, 'inventory_ledger', id), newItem);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `inventory_ledger/${id}`);
+    }
+  };
+
+  const updateLedgerItem = async (id: string, updates: Partial<LedgerItem>) => {
+    try {
+      await updateDoc(doc(db, 'inventory_ledger', id), updates);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.UPDATE, `inventory_ledger/${id}`);
+    }
+  };
+
+  const deleteLedgerItem = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'inventory_ledger', id));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `inventory_ledger/${id}`);
+    }
+  };
+
+  const saveLedgerSnapshot = async (
+    note: string,
+    stats: {
+      totalVariants: number;
+      totalStock: number;
+      grandTotal: number;
+      items: { serial: string; name: string; rate: number; stock: number }[];
+    }
+  ) => {
+    const id = `snap-${Date.now()}`;
+    const newSnapshot = {
+      id,
+      timestamp: Date.now(),
+      totalVariants: stats.totalVariants,
+      totalStock: stats.totalStock,
+      grandTotal: stats.grandTotal,
+      note: note,
+      items: stats.items
+    };
+    try {
+      await setDoc(doc(db, 'ledger_history', id), newSnapshot);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `ledger_history/${id}`);
+    }
+  };
+
+  const resetLedgerToNewPresets = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'inventory_ledger'));
+      for (const docSnap of snap.docs) {
+        await deleteDoc(doc(db, 'inventory_ledger', docSnap.id));
+      }
+
+      const NEW_PRESETS = [
+        '1" pipe',
+        '1" Elbow',
+        '1" Tee',
+        '1" Nipple',
+        '1" B-Elbow',
+        '1" soket',
+        '1" Adapter',
+        '1" Ball valve',
+        '1" Plug cap',
+        '1"*3/4 R-Tee',
+        '1"*3/4 R-Elbow',
+        '1"*1/2 B-Tee',
+        '1"*1/2 B-Elbow',
+        '1" b socket',
+        '1" R-Socket',
+        '1"*1/2 R-Elbow',
+        '1" Bush',
+        '3/4" pipe',
+        '3/4" Elbow',
+        '3/4" Tee',
+        '3/4" Nipple',
+        '3/4" B-Elbow',
+        '3/4" soket',
+        '3/4" Adapter',
+        '3/4" Ball valve',
+        '3/4" Plug cap',
+        '3/4"*1/2 B-Tee',
+        '3/4"*1/2 R-Tee',
+        '3/4"*1/2 B-Elbow',
+        '3/4"*1/2 R-Elbow',
+        '3/4"*1/2 R-Soket',
+        '1.5" Pipe',
+        '1.5" Elbow',
+        '1.5" Tee',
+        '1.5" Nipple',
+        '1.5" union',
+        '1.5" soket',
+        '1.5" Adapter',
+        '1.5" Ball valve',
+        '1.5" Plug cap',
+        '1.5"*1" Elbow',
+        '1.5"*1" Tee',
+        '1.5"*1" Socket',
+        '1.5"*3/4" -Tee',
+        '1.5"*3/4" Socket',
+        'Thread taped 20 MTR',
+        'Thread taped 10 MTR',
+        '1/2" BALL VALVE',
+        '1/2 Plug Cap'
+      ];
+
+      for (let i = 0; i < NEW_PRESETS.length; i++) {
+        const name = NEW_PRESETS[i];
+        const serialStr = String(i + 1).padStart(2, '0');
+        const id = `ledger-item-${serialStr}`;
+        await setDoc(doc(db, 'inventory_ledger', id), {
+          serial: serialStr,
+          name: name,
+          rate: 0,
+          stock: 0,
+          createdAt: Date.now() + i
+        });
+      }
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, 'inventory_ledger');
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       ...state,
@@ -266,7 +503,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updateOrderStatus,
       addReview,
       addQuestion,
-      answerQuestion
+      answerQuestion,
+      addLedgerItem,
+      updateLedgerItem,
+      deleteLedgerItem,
+      saveLedgerSnapshot,
+      resetLedgerToNewPresets
     }}>
       {children}
     </AppContext.Provider>

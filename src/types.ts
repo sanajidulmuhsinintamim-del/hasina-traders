@@ -85,3 +85,28 @@ export interface Qa {
   answeredAt?: number;
 }
 
+export interface LedgerItem {
+  id: string;
+  serial: string;
+  name: string;
+  rate: number;
+  stock: number;
+  createdAt: number;
+}
+
+export interface LedgerHistory {
+  id: string;
+  timestamp: number;
+  totalVariants: number;
+  totalStock: number;
+  grandTotal: number;
+  note: string;
+  items?: {
+    serial: string;
+    name: string;
+    rate: number;
+    stock: number;
+  }[];
+}
+
+

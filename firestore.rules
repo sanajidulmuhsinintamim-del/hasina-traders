@@ -104,5 +104,15 @@ service cloud.firestore {
       allow read: if true;
       allow create, update, delete: if isAdmin();
     }
+
+    match /inventory_ledger/{itemId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /ledger_history/{historyId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
   }
 }

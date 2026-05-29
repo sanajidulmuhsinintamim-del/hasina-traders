@@ -3,6 +3,7 @@ import { useStore } from './StoreProvider';
 import { LogOut, Package, Database, BarChart3, Plus, Tags, Trash2, Calendar, TrendingUp, Edit, Printer, ShoppingBag, Download, MessageSquare } from 'lucide-react';
 import { OfflineSale, Product, Order } from './types';
 import { loginWithGoogle, logoutUser } from './firebase';
+import { InventoryLedger } from './components/InventoryLedger';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -45,7 +46,7 @@ export const AdminLogin = ({ onOpenStore }: { onOpenStore: () => void }) => {
 
 export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
   const { offlineSales, onlineOrders } = useStore();
-  const [activeTab, setActiveTab] = useState<'POS' | 'ORDERS' | 'PRODUCTS' | 'BRANDS' | 'STATS' | 'QA_MODERATION'>('POS');
+  const [activeTab, setActiveTab] = useState<'POS' | 'ORDERS' | 'PRODUCTS' | 'BRANDS' | 'STATS' | 'QA_MODERATION' | 'LEDGER'>('POS');
   const [printData, setPrintData] = useState<{ type: 'offline', data: OfflineSale } | { type: 'online', data: Order | Order[] } | null>(null);
 
   const handleDownloadPDF = async () => {
@@ -291,6 +292,7 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
   const navItems = [
     { id: 'POS', label: 'Offline POS', icon: Database },
     { id: 'ORDERS', label: 'Online Orders', icon: ShoppingBag },
+    { id: 'LEDGER', label: 'Inventory Ledger', icon: TrendingUp },
     { id: 'PRODUCTS', label: 'DB Management', icon: Package },
     { id: 'BRANDS', label: 'Brand Registry', icon: Tags },
     { id: 'QA_MODERATION', label: 'Q&A Moderation', icon: MessageSquare },
@@ -299,27 +301,49 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12 flex flex-col">
-      <header className="bg-[#081621] text-white p-4 shadow-lg flex justify-between items-center sticky top-0 z-40 print:hidden">
-        <div className="flex items-center gap-3">
-          <div className="bg-white/10 p-2 rounded-lg"><Database size={20} className="text-[#ef4a23]"/></div>
-          <h1 className="font-bold text-xl tracking-tight">System Admin <span className="text-xs font-normal text-gray-400 block -mt-1">M/S Hasina Traders</span></h1>
+      <header className="bg-[#081621] text-white p-3 md:p-4 shadow-lg flex flex-col xl:flex-row justify-between items-center sticky top-0 z-40 print:hidden gap-3 xl:gap-8">
+        <div className="flex items-center justify-between w-full xl:w-auto">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="bg-white/10 p-1.5 md:p-2 rounded-lg shrink-0"><Database size={18} className="text-[#ef4a23]"/></div>
+            <h1 className="font-bold text-lg md:text-xl tracking-tight leading-tight">
+              System Admin 
+              <span className="text-[10px] md:text-xs font-normal text-gray-400 block md:-mt-0.5">M/S Hasina Traders</span>
+            </h1>
+          </div>
+          {/* Quick action buttons for mobile devices row to maintain easy workflow */}
+          <div className="flex xl:hidden gap-2">
+            <button 
+              onClick={onOpenStore} 
+              className="text-gray-300 hover:text-white text-xs font-semibold py-1 px-2.5 bg-white/5 border border-white/10 rounded transition-colors"
+            >
+              Store
+            </button>
+            <button 
+              onClick={async () => { await logoutUser(); }} 
+              className="text-[#ef4a23] hover:text-red-400 text-xs font-semibold py-1 px-2.5 bg-[#ef4a23]/5 border border-[#ef4a23]/25 rounded flex items-center gap-1 transition-colors"
+            >
+              <LogOut size={12} /> Out
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-8">
-          <nav className="flex gap-4">
+
+        <div className="w-full xl:w-auto flex flex-col md:flex-row items-center gap-3 md:gap-4 xl:gap-8">
+          <nav className="w-full flex items-center gap-1.5 overflow-x-auto pb-1.5 md:pb-0 md:flex-wrap md:justify-center xl:justify-start xl:overflow-x-visible no-scrollbar">
             {navItems.map(item => {
               const Icon = item.icon;
               return (
                 <button 
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors text-sm font-medium ${activeTab === item.id ? 'bg-[#ef4a23] text-white' : 'text-gray-300 hover:bg-white/5'}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 md:py-2 md:px-4 rounded-md transition-colors text-xs md:text-sm font-semibold shrink-0 cursor-pointer ${activeTab === item.id ? 'bg-[#ef4a23] text-white shadow-sm' : 'text-gray-300 hover:bg-white/5'}`}
                 >
-                  <Icon size={16} /> {item.label}
+                  <Icon size={14} /> {item.label}
                 </button>
               )
             })}
           </nav>
-          <div className="flex items-center gap-6 border-l border-white/20 pl-6">
+
+          <div className="hidden xl:flex items-center gap-6 border-l border-white/20 pl-6">
             <button onClick={onOpenStore} className="flex items-center gap-2 text-gray-300 hover:text-white text-sm font-medium">
               Storefront
             </button>
@@ -352,6 +376,7 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
         )}
         {activeTab === 'POS' && <OffilePOS onPrint={(sale) => setPrintData({ type: 'offline', data: sale })} />}
         {activeTab === 'ORDERS' && <OnlineOrders onPrint={(order) => setPrintData({ type: 'online', data: order })} />}
+        {activeTab === 'LEDGER' && <InventoryLedger />}
         {activeTab === 'PRODUCTS' && <ProductManager />}
         {activeTab === 'BRANDS' && <BrandManager />}
         {activeTab === 'QA_MODERATION' && <QaModeration />}
@@ -1475,46 +1500,13 @@ const OnlineOrders = ({ onPrint }: { onPrint: (order: Order | Order[]) => void }
   const [activeFilter, setActiveFilter] = useState<'All' | Order['status']>('All');
   const [showNotification, setShowNotification] = useState('');
 
-  const handleStatusChange = async (orderId: string, currentStatus: Order['status'], newStatus: Order['status'], phone: string) => {
+  const handleStatusChange = async (orderId: string, currentStatus: Order['status'], newStatus: Order['status'], _phone: string) => {
     if (currentStatus === newStatus) return;
     const confirmChange = window.confirm(`Change order status to ${newStatus}?`);
     if (!confirmChange) return;
 
     await updateOrderStatus(orderId, newStatus);
-    
-    if (newStatus === 'Delivered') {
-      const order = onlineOrders.find(o => o.id === orderId);
-      const cName = order?.customerInfo?.name || 'Customer';
-      const totalAmount = order?.total || 0;
-      const message = `Dear ${cName}, your order #${orderId} of BDT ${totalAmount.toLocaleString()} has been successfully delivered by M/S Hasina Traders! Thank you for purchasing of construction materials from us. For queries, contact +880-1988030534.`;
-      
-      const gatewayUrl = (import.meta as any).env.VITE_SMS_GATEWAY_API_URL || 'https://api.bulksmsbd.com/api/smsapi';
-      const apiToken = (import.meta as any).env.VITE_SMS_GATEWAY_API_TOKEN || '';
-      
-      if (apiToken) {
-        try {
-          console.log(`[SMS Gateway] Sending real delivery notification to: ${phone}...`);
-          await fetch(gatewayUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              token: apiToken,
-              to: phone,
-              message: message
-            })
-          });
-          setShowNotification(`Delivered notification sent to ${phone} successfully!`);
-        } catch (err) {
-          console.error('[SMS Gateway Error]', err);
-          setShowNotification(`Delivered! But SMS dispatch failed: ${String(err)}`);
-        }
-      } else {
-        console.log(`[SMS Simulation Mode] to ${phone}: "${message}"`);
-        setShowNotification(`SMS dispatched to ${phone}: "${message}"`);
-      }
-    } else {
-      setShowNotification(`Status updated to ${newStatus}. SMS Sent to ${phone}: "Your Hasina Traders Order is now ${newStatus}"`);
-    }
+    setShowNotification(`Order status successfully updated to "${newStatus}"!`);
     setTimeout(() => setShowNotification(''), 5000);
   };
 

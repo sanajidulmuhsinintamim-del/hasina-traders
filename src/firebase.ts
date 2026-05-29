@@ -40,7 +40,15 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     path
   }
   console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  
+  if (typeof window !== 'undefined') {
+    const isQuota = errInfo.error.toLowerCase().includes('quota') || errInfo.error.toLowerCase().includes('limit');
+    let displayMsg = `Firestore database failed on ${operationType} of "${path}": ${errInfo.error}`;
+    if (isQuota) {
+      displayMsg = "M/S Hasina Traders operates with a free Firestore quota. The daily free read/write limit of 50K operations has been temporarily exceeded for today. The system limits will reset automatically tomorrow. Thank you for your patience!";
+    }
+    window.dispatchEvent(new CustomEvent('database-quota-error', { detail: { message: displayMsg, isQuota } }));
+  }
 }
 
 // Connection test
