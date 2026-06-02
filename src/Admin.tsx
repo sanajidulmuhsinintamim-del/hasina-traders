@@ -2367,7 +2367,7 @@ const AboutPageEditor: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
-                  Proprietor Landscape Image link URL
+                  Proprietor Portrait Image link URL (1536 X 2048)
                 </label>
                 <input
                   type="text"
@@ -2382,7 +2382,7 @@ const AboutPageEditor: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
-                  Or Upload Direct File (Landscape format works best!)
+                  Or Upload Direct File (Portrait format 1536 x 2048 works best!)
                 </label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#ef4a23] transition-colors relative cursor-pointer bg-white">
                   <input

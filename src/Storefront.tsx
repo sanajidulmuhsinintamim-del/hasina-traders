@@ -216,7 +216,7 @@ const MeshProductSliderRow: React.FC<MeshProductSliderRowProps> = ({
           return (
             <div 
               key={`${p.id}-slide-${idx}`}
-              className="w-[125px] sm:w-[170px] md:w-[195px] shrink-0 flex flex-col justify-between bg-white rounded-lg shadow-sm border border-gray-150 p-1 sm:p-1.5 hover:shadow-lg hover:border-red-500 transition-all duration-305 text-xs text-left"
+              className="w-[110px] sm:w-[145px] md:w-[160px] shrink-0 flex flex-col justify-between bg-white rounded-lg shadow-sm border border-gray-150 p-1.5 hover:shadow-lg hover:border-red-500 transition-all duration-305 text-xs text-left"
             >
               <div className="relative">
                 {saveAmount > 0 ? (
@@ -229,10 +229,10 @@ const MeshProductSliderRow: React.FC<MeshProductSliderRowProps> = ({
                   </div>
                 )}
                 
-                {/* Noticeably taller image container with decreased margins/whitespace for larger photo view */}
+                {/* Decreased height for standard view to easily fit two dynamic rows together on desktop screen */}
                 <div 
                   onClick={() => { setSelectedProduct(p); setDetailsTab('specs'); }}
-                  className="w-full h-28 sm:h-40 md:h-44 flex items-center justify-center overflow-hidden rounded bg-gray-50/20 p-0.5 cursor-pointer relative"
+                  className="w-full h-24 sm:h-32 md:h-34 flex items-center justify-center overflow-hidden rounded bg-gray-50/20 p-0.5 cursor-pointer relative"
                 >
                   <img 
                     src={p.imageUrl} 
@@ -827,157 +827,272 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
     <div className="min-h-screen bg-[#f2f4f8] flex flex-col font-sans relative text-gray-900 select-none">
       
       {/* Main Header (Pure Star Tech Style Architecture) */}
-      <header className="bg-gradient-to-r from-[#081621] via-[#0d2232] to-[#081621] text-white sticky top-0 z-30 shadow-2xl border-t-2 border-[#ef4a23] border-b border-orange-500/10 py-3 sm:py-5 md:py-6 select-none select-none">
-        <div className="max-w-7xl mx-auto px-4 flex flex-row items-center justify-between gap-2 sm:gap-4 flex-nowrap">
+      <header className="bg-gradient-to-r from-[#081621] via-[#0d2232] to-[#081621] text-white sticky top-0 z-30 shadow-2xl border-t-2 border-[#ef4a23] border-b border-orange-500/10 py-3.5 sm:py-5 md:py-6 select-none">
+        <div className="max-w-7xl mx-auto px-4">
           
-          {/* Logo, Brand Identity, & Navigation Tabs next to it */}
-          <div className="flex flex-row items-center gap-3 sm:gap-5 md:gap-8 shrink-0">
-             <div className="cursor-pointer shrink-0 flex flex-col justify-center" onClick={() => { setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}>
-                <h1 className="text-sm sm:text-lg md:text-2xl font-black tracking-tight text-white m-0 leading-none hover:text-[#ef4a23] transition-colors whitespace-nowrap">
+          {/* MOBILE RESPONSIVE LAYOUT (Double-row setup to handle small screens elegantly without any ribbon truncation) */}
+          <div className="flex md:hidden flex-col gap-2.5">
+            {/* Row 1: Brand Logo & Actions */}
+            <div className="flex flex-row items-center justify-between gap-2 flex-nowrap w-full">
+              {/* Logo / Brand Name - 100% visible on mobile, no overlapping or clipping */}
+              <div 
+                className="cursor-pointer shrink-0 flex flex-col text-left justify-center" 
+                onClick={() => { setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+              >
+                <h1 className="text-sm font-black tracking-tight text-white m-0 leading-none hover:text-[#ef4a23] transition-colors whitespace-nowrap">
                   মেসার্স হাসিনা ট্রেডার্স
                 </h1>
-                <div className="h-1.5 sm:h-2"></div>
-                <p className="text-gray-300 text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest leading-none">
+                <div className="h-1"></div>
+                <p className="text-gray-350 text-[8.5px] font-black uppercase tracking-widest leading-none">
                   M/S Hasina Traders
                 </p>
-             </div>
+              </div>
 
-             {/* Header Navigation Menu right next to the Brand name with no overflow scroll or swipe system */}
-             <div className="flex bg-[#0c1e2d] p-0.5 rounded-lg border border-gray-800 shadow-inner flex-nowrap">
-               <button 
-                 onClick={() => { 
-                   setCurrentTab('home'); 
-                   setIsCheckout(false); 
-                   setIsProfileOpen(false); 
-                   setSelectedProduct(null); 
-                 }}
-                 className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-3 py-1 rounded text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
-                   currentTab === 'home' && !isCheckout && !isProfileOpen && !selectedProduct
-                     ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
-                     : 'text-gray-400 hover:text-white hover:bg-white/5'
-                 }`}
-               >
-                 🏡 Home
-               </button>
+              {/* Actions: Hotline, Cart, User, Admin */}
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Mobile Hotline Quick Action link */}
+                <a 
+                  href="tel:+8801988030534" 
+                  className="flex items-center gap-1 bg-[#ef4a23]/20 border border-[#ef4a23]/40 px-2 py-1 rounded hover:bg-[#ef4a23] transition-all shrink-0"
+                  title="Call Hotline"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+                  <span className="font-mono text-[9px] font-black text-white">+880-1988030534</span>
+                </a>
 
-               <button 
-                 onClick={() => { 
-                   setCurrentTab('shop'); 
-                   setIsCheckout(false); 
-                   setIsProfileOpen(false); 
-                   setSelectedProduct(null); 
-                 }}
-                 className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-3 py-1 rounded text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
-                   currentTab === 'shop' && !isCheckout && !isProfileOpen && !selectedProduct
-                     ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
-                     : 'text-gray-400 hover:text-white hover:bg-white/5'
-                 }`}
-               >
-                 🛍️ Shop
-               </button>
+                {/* Cart Icon */}
+                <button 
+                  onClick={() => setIsCartOpen(true)} 
+                  className="relative p-1 text-white hover:text-[#ef4a23] transition-colors shrink-0 cursor-pointer"
+                  title="View Cart"
+                >
+                  <ShoppingCart size={17} />
+                  {cartItemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-[#ef4a23] text-white text-[7.5px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                      {cartItemCount}
+                    </span>
+                  )}
+                </button>
 
-               <button 
-                 onClick={() => { 
-                   setCurrentTab('contact'); 
-                   setIsCheckout(false); 
-                   setIsProfileOpen(false); 
-                   setSelectedProduct(null); 
-                 }}
-                 className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-3 py-1 rounded text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
-                   currentTab === 'contact' && !isCheckout && !isProfileOpen && !selectedProduct
-                     ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
-                     : 'text-gray-400 hover:text-white hover:bg-white/5'
-                 }`}
-               >
-                 📞 Contact
-               </button>
+                {/* Profile Button */}
+                {currentUser ? (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button 
+                      onClick={() => { setIsProfileOpen(!isProfileOpen); setIsCheckout(false); setSelectedProduct(null); }}
+                      className={`flex items-center gap-0.5 text-[8.5px] font-black uppercase text-white hover:text-[#ef4a23] px-1.5 py-1 rounded border ${isProfileOpen ? 'border-[#ef4a23] text-[#ef4a23]' : 'border-gray-800 bg-[#112335]'} transition-all`}
+                    >
+                      <User size={11} className="text-[#ef4a23]" />
+                      <span className="max-w-[42px] truncate inline">{currentUser.displayName || 'User'}</span>
+                    </button>
+                    <button onClick={handleLogout} className="p-0.5 hover:text-red-500 text-gray-400 transition-colors shrink-0" title="Log Out">
+                      <LogOut size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => { setIsAuthModalOpen(true); setAuthTab('login'); }}
+                    className="flex items-center gap-0.5 hover:text-[#ef4a23] border border-gray-800 text-[8.5px] font-black tracking-wide bg-[#112335] text-white py-1 px-1.5 rounded shadow-inner transition-colors shrink-0"
+                  >
+                    <LogIn size={11} className="text-[#ef4a23]"/>
+                    <span>Login</span>
+                  </button>
+                )}
 
-               <button 
-                 onClick={() => { 
-                   setCurrentTab('about'); 
-                   setIsCheckout(false); 
-                   setIsProfileOpen(false); 
-                   setSelectedProduct(null); 
-                 }}
-                 className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-3 py-1 rounded text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
-                   currentTab === 'about' && !isCheckout && !isProfileOpen && !selectedProduct
-                     ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
-                     : 'text-gray-400 hover:text-white hover:bg-white/5'
-                 }`}
-               >
-                 ℹ️ About Us
-               </button>
-             </div>
+                {/* Admin Icon link */}
+                <button onClick={onOpenAdmin} className="text-gray-400 hover:text-white p-0.5 shrink-0" title="Admin Dashboard">
+                  <svg size={15} className="w-3.5 h-3.5 fill-current inline-block" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Row 2: Full Width Navigation Tabs Ribbon */}
+            <div className="flex bg-[#0c1e2d] p-0.5 rounded-lg border border-gray-800 shadow-inner w-full flex-row">
+              <button 
+                onClick={() => { setCurrentTab('home'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+                className={`flex-1 text-center py-1 rounded text-[9.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                  currentTab === 'home' && !isCheckout && !isProfileOpen && !selectedProduct
+                    ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)]' 
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                🏡 Home
+              </button>
+
+              <button 
+                onClick={() => { setCurrentTab('shop'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+                className={`flex-1 text-center py-1 rounded text-[9.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                  currentTab === 'shop' && !isCheckout && !isProfileOpen && !selectedProduct
+                    ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)]' 
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                🛍️ Shop
+              </button>
+
+              <button 
+                onClick={() => { setCurrentTab('contact'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+                className={`flex-1 text-center py-1 rounded text-[9.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                  currentTab === 'contact' && !isCheckout && !isProfileOpen && !selectedProduct
+                    ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)]' 
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                📞 Contact
+              </button>
+
+              <button 
+                onClick={() => { setCurrentTab('about'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+                className={`flex-1 text-center py-1 rounded text-[9.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                  currentTab === 'about' && !isCheckout && !isProfileOpen && !selectedProduct
+                    ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)]' 
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                ℹ️ About Us
+              </button>
+            </div>
           </div>
 
-          {/* Premium Glowing Hotline Display - Integrated in the same single line */}
-          <div className="hidden lg:flex items-center gap-2 bg-[#ef4a23]/10 border border-[#ef4a23]/30 px-3 py-1.5 rounded-lg shadow-inner shrink-0">
-             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-             <div className="flex flex-col text-left">
-               <span className="text-[8px] uppercase font-black tracking-widest text-[#ef4a23] leading-none">Building Materials Hotline</span>
-               <a href="tel:+8801988030534" className="font-mono text-xs font-black text-white hover:text-[#ef4a23] mt-1 transition-colors leading-none">
-                 +880-1988030534
-               </a>
-             </div>
-          </div>
+          {/* DESKTOP LAYOUT (Perfect single-row design retained for large screens - "desktop okay ase") */}
+          <div className="hidden md:flex flex-row items-center justify-between gap-4 flex-nowrap w-full">
+            
+            {/* Logo, Brand Identity, & Navigation Tabs next to it */}
+            <div className="flex flex-row items-center gap-5 md:gap-8 shrink-0">
+               <div className="cursor-pointer shrink-0 flex flex-col justify-center" onClick={() => { setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}>
+                  <h1 className="text-base sm:text-lg md:text-2xl font-black tracking-tight text-white m-0 leading-none hover:text-[#ef4a23] transition-colors whitespace-nowrap">
+                    মেসার্স হাসিনা ট্রেডার্স
+                  </h1>
+                  <div className="h-1.5 sm:h-2"></div>
+                  <p className="text-gray-300 text-[10px] md:text-xs font-black uppercase tracking-widest leading-none">
+                    M/S Hasina Traders
+                  </p>
+               </div>
 
-          {/* Quick Actions (Cart, Profile, Admin) inline with no Google Auth Badge */}
-          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-             
-             {/* Mobile Hotline Quick Action Icon - Visible on small screens */}
-             <div className="flex lg:hidden items-center">
-               <a 
-                 href="tel:+8801988030534" 
-                 className="flex items-center gap-1 bg-[#ef4a23]/20 border border-[#ef4a23]/40 p-1.5 rounded-md hover:bg-[#ef4a23] transition-all"
-                 title="Call Hotline"
-               >
-                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                 <span className="font-mono text-[9px] sm:text-[10px] font-black text-white">+880-1988030534</span>
-               </a>
-             </div>
-
-             {/* Cart Flow Action */}
-             <button 
-               onClick={() => setIsCartOpen(true)} 
-               className="relative p-1.5 text-white hover:text-[#ef4a23] transition-colors shrink-0"
-               title="View Cart"
-             >
-               <ShoppingCart size={18} />
-               {cartItemCount > 0 && (
-                 <span className="absolute -top-1 -right-1 bg-[#ef4a23] text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-                   {cartItemCount}
-                 </span>
-               )}
-             </button>
-
-             {/* Profile Dashboard flow */}
-             {currentUser ? (
-               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+               {/* Header Navigation Menu right next to the Brand name with no overflow scroll or swipe system */}
+               <div className="flex bg-[#0c1e2d] p-0.5 rounded-lg border border-gray-800 shadow-inner flex-nowrap">
                  <button 
-                   onClick={() => { setIsProfileOpen(!isProfileOpen); setIsCheckout(false); setSelectedProduct(null); }}
-                   className={`flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase text-white hover:text-[#ef4a23] px-1.5 py-1 rounded border ${isProfileOpen ? 'border-[#ef4a23] text-[#ef4a23]' : 'border-gray-800 bg-[#112335]'} transition-all`}
+                   onClick={() => { 
+                     setCurrentTab('home'); 
+                     setIsCheckout(false); 
+                     setIsProfileOpen(false); 
+                     setSelectedProduct(null); 
+                   }}
+                   className={`flex items-center gap-1 px-3 py-1 rounded text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
+                     currentTab === 'home' && !isCheckout && !isProfileOpen && !selectedProduct
+                       ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
+                       : 'text-gray-400 hover:text-white hover:bg-white/5'
+                   }`}
                  >
-                   <User size={13} className="text-[#ef4a23]" />
-                   <span className="max-w-[50px] sm:max-w-[80px] truncate hidden xs:inline">{currentUser.displayName || 'User'}</span>
+                   🏡 Home
                  </button>
-                 <button onClick={handleLogout} className="p-1 hover:text-red-500 text-gray-400 transition-colors shrink-0" title="Log Out">
-                   <LogOut size={14} />
+
+                 <button 
+                   onClick={() => { 
+                     setCurrentTab('shop'); 
+                     setIsCheckout(false); 
+                     setIsProfileOpen(false); 
+                     setSelectedProduct(null); 
+                   }}
+                   className={`flex items-center gap-1 px-3 py-1 rounded text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
+                     currentTab === 'shop' && !isCheckout && !isProfileOpen && !selectedProduct
+                       ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
+                       : 'text-gray-400 hover:text-white hover:bg-white/5'
+                   }`}
+                 >
+                   🛍️ Shop
+                 </button>
+
+                 <button 
+                   onClick={() => { 
+                     setCurrentTab('contact'); 
+                     setIsCheckout(false); 
+                     setIsProfileOpen(false); 
+                     setSelectedProduct(null); 
+                   }}
+                   className={`flex items-center gap-1 px-3 py-1 rounded text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
+                     currentTab === 'contact' && !isCheckout && !isProfileOpen && !selectedProduct
+                       ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
+                       : 'text-gray-400 hover:text-white hover:bg-white/5'
+                   }`}
+                 >
+                   📞 Contact
+                 </button>
+
+                 <button 
+                   onClick={() => { 
+                     setCurrentTab('about'); 
+                     setIsCheckout(false); 
+                     setIsProfileOpen(false); 
+                     setSelectedProduct(null); 
+                   }}
+                   className={`flex items-center gap-1 px-3 py-1 rounded text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
+                     currentTab === 'about' && !isCheckout && !isProfileOpen && !selectedProduct
+                       ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
+                       : 'text-gray-400 hover:text-white hover:bg-white/5'
+                   }`}
+                 >
+                   ℹ️ About Us
                  </button>
                </div>
-             ) : (
-               <button 
-                 onClick={() => { setIsAuthModalOpen(true); setAuthTab('login'); }}
-                 className="flex items-center gap-1 hover:text-[#ef4a23] border border-gray-850 text-[10px] sm:text-xs font-black tracking-wide bg-[#112335] text-white py-1 px-2 rounded shadow-inner transition-colors shrink-0"
-               >
-                 <LogIn size={13} className="text-[#ef4a23]"/>
-                 <span className="hidden xs:inline">Login</span>
-               </button>
-             )}
+            </div>
 
-             {/* Secure Admin Portal Link */}
-             <button onClick={onOpenAdmin} className="text-gray-400 hover:text-white p-1 shrink-0" title="Admin Dashboard">
-               <svg size={16} className="w-4 h-4 fill-current inline-block" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
-             </button>
+            {/* Premium Glowing Hotline Display - Integrated in the same single line */}
+            <div className="hidden lg:flex items-center gap-2 bg-[#ef4a23]/10 border border-[#ef4a23]/30 px-3 py-1.5 rounded-lg shadow-inner shrink-0">
+               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+               <div className="flex flex-col text-left">
+                 <span className="text-[8px] uppercase font-black tracking-widest text-[#ef4a23] leading-none">Building Materials Hotline</span>
+                 <a href="tel:+8801988030534" className="font-mono text-xs font-black text-white hover:text-[#ef4a23] mt-1 transition-colors leading-none">
+                   +880-1988030534
+                 </a>
+               </div>
+            </div>
+
+            {/* Quick Actions (Cart, Profile, Admin) inline with no Google Auth Badge */}
+            <div className="flex items-center gap-4 shrink-0">
+               {/* Cart Flow Action */}
+               <button 
+                 onClick={() => setIsCartOpen(true)} 
+                 className="relative p-1.5 text-white hover:text-[#ef4a23] transition-colors shrink-0 cursor-pointer"
+                 title="View Cart"
+               >
+                 <ShoppingCart size={18} />
+                 {cartItemCount > 0 && (
+                   <span className="absolute -top-1 -right-1 bg-[#ef4a23] text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                     {cartItemCount}
+                   </span>
+                 )}
+               </button>
+
+               {/* Profile Dashboard flow */}
+               {currentUser ? (
+                 <div className="flex items-center gap-2 shrink-0">
+                   <button 
+                     onClick={() => { setIsProfileOpen(!isProfileOpen); setIsCheckout(false); setSelectedProduct(null); }}
+                     className={`flex items-center gap-1 text-xs font-black uppercase text-white hover:text-[#ef4a23] px-1.5 py-1 rounded border ${isProfileOpen ? 'border-[#ef4a23] text-[#ef4a23]' : 'border-gray-800 bg-[#112335]'} transition-all`}
+                   >
+                     <User size={13} className="text-[#ef4a23]" />
+                     <span className="max-w-[80px] truncate hidden xs:inline">{currentUser.displayName || 'User'}</span>
+                   </button>
+                   <button onClick={handleLogout} className="p-1 hover:text-red-500 text-gray-400 transition-colors shrink-0" title="Log Out">
+                     <LogOut size={14} />
+                   </button>
+                 </div>
+               ) : (
+                 <button 
+                   onClick={() => { setIsAuthModalOpen(true); setAuthTab('login'); }}
+                   className="flex items-center gap-1 hover:text-[#ef4a23] border border-gray-850 text-xs font-black tracking-wide bg-[#112335] text-white py-1.5 px-3 rounded shadow-inner transition-colors shrink-0"
+                 >
+                   <LogIn size={13} className="text-[#ef4a23]"/>
+                   <span className="hidden xs:inline">Login</span>
+                 </button>
+               )}
+
+               {/* Secure Admin Portal Link */}
+               <button onClick={onOpenAdmin} className="text-gray-400 hover:text-white p-1 shrink-0" title="Admin Dashboard">
+                 <svg size={16} className="w-4 h-4 fill-current inline-block" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+               </button>
+            </div>
+
           </div>
 
         </div>
@@ -1492,7 +1607,7 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                   </h2>
                 </div>
 
-                {/* 3 Parallel Infinite Glide Loops with Shuffled Sequences and Alternating Scroll Directions */}
+                {/* 2 Parallel Infinite Glide Loops with Shuffled Sequences both scrolling in the same direction */}
                 <div className="space-y-3 relative select-text font-sans">
                   
                   {/* Row 1 - Seed 101 - Slides Left (Positive medium-fast speed) */}
@@ -1508,24 +1623,11 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                     />
                   </div>
 
-                  {/* Row 2 - Seed 202 - Slides Right (Negative medium-fast speed) */}
+                  {/* Row 2 - Seed 202 - Slides Left (Positive medium-fast speed - same direction!) */}
                   <div>
                     <MeshProductSliderRow 
                       products={products} 
                       seed={202} 
-                      speed={-1.6} 
-                      addToCart={addToCart}
-                      setSelectedProduct={setSelectedProduct}
-                      setDetailsTab={setDetailsTab}
-                      isConstructionRod={isConstructionRod}
-                    />
-                  </div>
-
-                  {/* Row 3 - Seed 303 - Slides Left (Positive medium-fast speed) */}
-                  <div>
-                    <MeshProductSliderRow 
-                      products={products} 
-                      seed={303} 
                       speed={1.6} 
                       addToCart={addToCart}
                       setSelectedProduct={setSelectedProduct}
@@ -1540,20 +1642,22 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
               {/* SECTION 3: PREMIUM OWNER SHOWCASE BANNER */}
               <div className="bg-gradient-to-br from-[#081621] to-[#0c1e2d] text-white rounded-2xl shadow-xl overflow-hidden border-b-4 border-[#ef4a23] mt-8 text-left font-sans">
                 <div className="flex flex-col md:flex-row items-stretch">
-                  {/* Left Side: Owner Profile Landscape image inside a cool frame */}
-                  <div className="w-full md:w-[42%] shrink-0 relative min-h-[220px] sm:min-h-[280px] md:min-h-full">
-                    <img 
-                      src={homeOwnerPhotoUrl || "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&q=80&w=1200"} 
-                      alt="MS Hasina Traders Proprietor" 
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 hover:scale-[1.02]"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/85 via-black/20 to-transparent"></div>
-                    {/* Floating badge inside the landscape container */}
-                    <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 z-10">
-                      <span className="bg-[#ef4a23] text-white text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded shadow-md border border-[#ef4a23]/30">
-                        Reliable Leader Since 1996
-                      </span>
+                  {/* Left Side: Owner Profile Portrait image (Dimension style: 1536 X 2048) */}
+                  <div className="w-full md:w-[32%] lg:w-[28%] shrink-0 relative bg-slate-950/20 border-r border-[#ef4a23]/10 flex flex-col justify-stretch">
+                    <div className="relative aspect-[1536/2048] w-full h-full min-h-[300px] md:h-full">
+                      <img 
+                        src={homeOwnerPhotoUrl || "https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&q=80&w=1536&h=2048"} 
+                        alt="MS Hasina Traders Proprietor" 
+                        className="absolute inset-0 w-full h-full object-cover object-top transition-transform duration-500 hover:scale-[1.02]"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/90 via-black/30 to-transparent"></div>
+                      {/* Floating badge inside the portrait container */}
+                      <div className="absolute bottom-4 left-4 sm:bottom-5 sm:left-5 z-10">
+                        <span className="bg-[#ef4a23] text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded shadow-md border border-[#ef4a23]/30">
+                          Reliable Leader Since 1996
+                        </span>
+                      </div>
                     </div>
                   </div>
 
