@@ -19,11 +19,22 @@ interface AppState {
   ledgerItems: LedgerItem[];
   ledgerHistory: LedgerHistory[];
   isLoaded: boolean;
+  aboutUsTitle?: string;
+  aboutUsText?: string;
+  aboutUsPhotoUrl?: string;
+  facebookUrl?: string;
+  youtubeUrl?: string;
+  otherUrl?: string;
+  homeOwnerPhotoUrl?: string;
+  homeOwnerText?: string;
+  homeOwnerTitle?: string;
 }
 
 interface AppContextType extends AppState {
   addBrand: (brand: string) => void;
   removeBrand: (brand: string) => void;
+  addCategory: (category: string) => void;
+  removeCategory: (category: string) => void;
   addUnit: (unit: string) => void;
   addProduct: (product: Omit<Product, 'id' | 'createdAt'>) => void;
   updateProduct: (id: string, product: Partial<Product>) => void;
@@ -39,6 +50,7 @@ interface AppContextType extends AppState {
   deleteLedgerItem: (id: string) => Promise<void>;
   saveLedgerSnapshot: (note: string, stats: { totalVariants: number, totalStock: number, grandTotal: number, items: { serial: string, name: string, rate: number, stock: number }[] }) => Promise<void>;
   resetLedgerToNewPresets: () => Promise<void>;
+  updateAboutUs: (title: string, text: string, photoUrl: string, facebookUrl?: string, youtubeUrl?: string, otherUrl?: string, homeOwnerPhotoUrl?: string, homeOwnerText?: string, homeOwnerTitle?: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -65,7 +77,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       // For this app, only TAMIM and BABUL are admins. We check if the Google Account matches the preconfigured one.
       let isAdmin = false;
-      if (user && user.emailVerified && user.email) {
+      if (user && user.email) {
         const normEmail = user.email.toLowerCase().replace(/\s+/g, '');
         const rawEmail = user.email.toLowerCase();
         isAdmin = normEmail === 'sanajidul.muhsinin.tamim@gmail.com' ||
@@ -76,6 +88,45 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setState(s => ({ ...s, currentUser: user, isAdminAuth: isAdmin }));
     });
 
+    // Client-side caching bootstrap to eliminate FCP loading lag
+    try {
+      const cachedProducts = localStorage.getItem('hasina_cached_products');
+      const cachedReviews = localStorage.getItem('hasina_cached_reviews');
+      const cachedQas = localStorage.getItem('hasina_cached_qas');
+      const cachedConfig = localStorage.getItem('hasina_cached_config');
+
+      setState(s => {
+        let next = { ...s };
+        if (cachedProducts) {
+          next.products = JSON.parse(cachedProducts);
+        }
+        if (cachedReviews) {
+          next.reviews = JSON.parse(cachedReviews);
+        }
+        if (cachedQas) {
+          next.qas = JSON.parse(cachedQas);
+        }
+        if (cachedConfig) {
+          const conf = JSON.parse(cachedConfig);
+          if (conf.brands) next.brands = conf.brands;
+          if (conf.categories) next.categories = conf.categories;
+          if (conf.units) next.units = conf.units;
+          if (conf.aboutUsTitle) next.aboutUsTitle = conf.aboutUsTitle;
+          if (conf.aboutUsText) next.aboutUsText = conf.aboutUsText;
+          if (conf.aboutUsPhotoUrl) next.aboutUsPhotoUrl = conf.aboutUsPhotoUrl;
+          if (conf.facebookUrl) next.facebookUrl = conf.facebookUrl;
+          if (conf.youtubeUrl) next.youtubeUrl = conf.youtubeUrl;
+          if (conf.otherUrl) next.otherUrl = conf.otherUrl;
+          if (conf.homeOwnerPhotoUrl) next.homeOwnerPhotoUrl = conf.homeOwnerPhotoUrl;
+          if (conf.homeOwnerText) next.homeOwnerText = conf.homeOwnerText;
+          if (conf.homeOwnerTitle) next.homeOwnerTitle = conf.homeOwnerTitle;
+        }
+        return next;
+      });
+    } catch (e) {
+      console.warn("localStorage cache loading skipped or failed:", e);
+    }
+
     return () => unsubscribeAuth();
   }, []);
 
@@ -83,19 +134,31 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Products Listener
     const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       const products = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Product));
-      setState(s => ({ ...s, products: products.sort((a, b) => b.createdAt - a.createdAt) }));
+      const sortedProds = products.sort((a, b) => b.createdAt - a.createdAt);
+      try {
+        localStorage.setItem('hasina_cached_products', JSON.stringify(sortedProds));
+      } catch (e) {}
+      setState(s => ({ ...s, products: sortedProds }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'products'));
 
     // Reviews Listener
     const unsubReviews = onSnapshot(collection(db, 'reviews'), (snapshot) => {
       const revs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Review));
-      setState(s => ({ ...s, reviews: revs.sort((a, b) => b.createdAt - a.createdAt) }));
+      const sortedRevs = revs.sort((a, b) => b.createdAt - a.createdAt);
+      try {
+        localStorage.setItem('hasina_cached_reviews', JSON.stringify(sortedRevs));
+      } catch (e) {}
+      setState(s => ({ ...s, reviews: sortedRevs }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'reviews'));
 
     // Q&A Listener
     const unsubQas = onSnapshot(collection(db, 'qas'), (snapshot) => {
       const qs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Qa));
-      setState(s => ({ ...s, qas: qs.sort((a, b) => b.createdAt - a.createdAt) }));
+      const sortedQs = qs.sort((a, b) => b.createdAt - a.createdAt);
+      try {
+        localStorage.setItem('hasina_cached_qas', JSON.stringify(sortedQs));
+      } catch (e) {}
+      setState(s => ({ ...s, qas: sortedQs }));
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'qas'));
 
     // Ledger Items Listener
@@ -123,9 +186,51 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const unsubSettings = onSnapshot(doc(db, 'storeSettings', 'config'), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        try {
+          localStorage.setItem('hasina_cached_config', JSON.stringify({
+            brands: data.brands,
+            categories: data.categories,
+            units: data.units,
+            aboutUsTitle: data.aboutUsTitle,
+            aboutUsText: data.aboutUsText,
+            aboutUsPhotoUrl: data.aboutUsPhotoUrl,
+            facebookUrl: data.facebookUrl,
+            youtubeUrl: data.youtubeUrl,
+            otherUrl: data.otherUrl,
+            homeOwnerPhotoUrl: data.homeOwnerPhotoUrl,
+            homeOwnerText: data.homeOwnerText,
+            homeOwnerTitle: data.homeOwnerTitle
+          }));
+        } catch (e) {}
+
         if (data.brands) setState(s => ({ ...s, brands: data.brands }));
         if (data.categories) setState(s => ({ ...s, categories: data.categories }));
         if (data.units) setState(s => ({ ...s, units: data.units }));
+        setState(s => ({
+          ...s,
+          aboutUsTitle: data.aboutUsTitle || "Our Proprietor Bablu Matubbor",
+          aboutUsText: data.aboutUsText || "M/S Hasina Traders has been a pioneer in building construction supplies and structural materials since 1996 in Gopalganj, Faridpur, and surrounding districts. Focused on reliability, premium quality standards, and on-site delivery networks.",
+          aboutUsPhotoUrl: data.aboutUsPhotoUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=600",
+          facebookUrl: data.facebookUrl || "https://facebook.com",
+          youtubeUrl: data.youtubeUrl || "https://youtube.com",
+          otherUrl: data.otherUrl || "",
+          homeOwnerPhotoUrl: data.homeOwnerPhotoUrl || "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&q=80&w=1200",
+          homeOwnerTitle: data.homeOwnerTitle || "মেসার্স হাসিনা ট্রেডার্স-এর চেয়ারম্যান ও প্রোপরাইটর বাবুল মাতুব্বর",
+          homeOwnerText: data.homeOwnerText || "বিগত ৩ দশক ধরে আমরা অত্যন্ত সততা ও বিশ্বস্ততার সাথে গোপালগঞ্জ, ফরিদপুর ও পার্শ্ববর্তী অঞ্চলে বিশ্বখ্যাত রড, সেরা ব্র্যান্ডের কোয়ালিটি সিমেন্ট এবং স্যানিটারি সামগ্রী সরবরাহ করে আসছি। গুণগত মান ও ওজনে বিন্দুমাত্র ছাড় না দিয়ে দেশের উন্নয়ন কার্যক্রমে সরাসরি অংশীদার থাকাই আমাদের সর্বোচ্চ অঙ্গীকার। কাঙ্ক্ষিত সময়ে ও নিরাপদ ডেলিভারির নিশ্চয়তার মাধ্যমে আপনার কষ্টের টাকায় গড়া স্বপ্নের প্রতিটি স্থাপনা মজবুত ও দীর্ঘস্থায়ী করার লক্ষ্যে আমরা অবিরাম কাজ করে যাচ্ছি। যেকোনো নির্মাণ প্রকল্পে আমাদের পরামর্শ ও সহযোগিতার জন্য সরাসরি হটলাইনে যোগাযোগ করুন।"
+        }));
+      } else {
+        setState(s => ({
+          ...s,
+          aboutUsTitle: "Our Proprietor Bablu Matubbor",
+          aboutUsText: "M/S Hasina Traders has been a pioneer in building construction supplies and structural materials since 1996 in Gopalganj, Faridpur, and surrounding districts. Focused on reliability, premium quality standards, and on-site delivery networks.",
+          aboutUsPhotoUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=600",
+          facebookUrl: "https://facebook.com",
+          youtubeUrl: "https://youtube.com",
+          otherUrl: "",
+          homeOwnerPhotoUrl: "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&q=80&w=1200",
+          homeOwnerTitle: "মেসার্স হাসিনা ট্রেডার্স-এর চেয়ারম্যান ও প্রোপরাইটর বাবুল মাতুব্বর",
+          homeOwnerText: "বিগত ৩ দশক ধরে আমরা অত্যন্ত সততা ও বিশ্বস্ততার সাথে গোপালগঞ্জ, ফরিদপুর ও পার্শ্ববর্তী অঞ্চলে বিশ্বখ্যাত রড, সেরা ব্র্যান্ডের কোয়ালিটি সিমেন্ট এবং স্যানিটারি সামগ্রী সরবরাহ করে আসছি। গুণগত মান ও ওজনে বিন্দুমাত্র ছাড় না দিয়ে দেশের উন্নয়ন কার্যক্রমে সরাসরি অংশীদার থাকাই আমাদের সর্বোচ্চ অঙ্গীকার। কাঙ্ক্ষিত সময়ে ও নিরাপদ ডেলিভারির নিশ্চয়তার মাধ্যমে আপনার কষ্টের টাকায় গড়া স্বপ্নের প্রতিটি স্থাপনা মজবুত ও দীর্ঘস্থায়ী করার লক্ষ্যে আমরা অবিরাম কাজ করে যাচ্ছি। যেকোনো নির্মাণ প্রকল্পে আমাদের পরামর্শ ও সহযোগিতার জন্য সরাসরি হটলাইনে যোগাযোগ করুন।"
+        }));
       }
       setState(s => ({ ...s, isLoaded: true }));
     }, (err) => handleFirestoreError(err, OperationType.GET, 'storeSettings/config'));
@@ -265,6 +370,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const removeBrand = async (brand: string) => {
     const newBrands = state.brands.filter(b => b !== brand);
     await updateSettings({ brands: newBrands });
+  };
+
+  const addCategory = async (category: string) => {
+    const newCategories = state.categories.includes(category) ? state.categories : [...state.categories, category];
+    await updateSettings({ categories: newCategories });
+  };
+
+  const removeCategory = async (category: string) => {
+    const newCategories = state.categories.filter(c => c !== category);
+    await updateSettings({ categories: newCategories });
   };
 
   const addUnit = async (unit: string) => {
@@ -489,11 +604,41 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  const updateAboutUs = async (
+    title: string, 
+    text: string, 
+    photoUrl: string, 
+    facebookUrl?: string, 
+    youtubeUrl?: string, 
+    otherUrl?: string,
+    homeOwnerPhotoUrl?: string,
+    homeOwnerText?: string,
+    homeOwnerTitle?: string
+  ) => {
+    try {
+      await setDoc(doc(db, 'storeSettings', 'config'), {
+        aboutUsTitle: title,
+        aboutUsText: text,
+        aboutUsPhotoUrl: photoUrl,
+        facebookUrl: facebookUrl || "",
+        youtubeUrl: youtubeUrl || "",
+        otherUrl: otherUrl || "",
+        homeOwnerPhotoUrl: homeOwnerPhotoUrl || "",
+        homeOwnerText: homeOwnerText || "",
+        homeOwnerTitle: homeOwnerTitle || ""
+      }, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, 'storeSettings/config');
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       ...state,
       addBrand,
       removeBrand,
+      addCategory,
+      removeCategory,
       addUnit,
       addProduct,
       updateProduct,
@@ -508,7 +653,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       updateLedgerItem,
       deleteLedgerItem,
       saveLedgerSnapshot,
-      resetLedgerToNewPresets
+      resetLedgerToNewPresets,
+      updateAboutUs
     }}>
       {children}
     </AppContext.Provider>

@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+
+# Sitemap link tells search engine spiders where to find the index maps automatically
+Sitemap: https://ms-hasina-traders.web.app/sitemap.xml

@@ -1,9 +1,289 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useStore } from './StoreProvider';
-import { Search, ShoppingCart, User, Phone, MapPin, CheckCircle, Plus, Minus, Trash2, X, Star, MessageSquare, LogIn, LogOut, Tag, ArrowLeft, ArrowUpRight, ShieldCheck, Heart } from 'lucide-react';
+import { 
+  Search, ShoppingCart, User, Phone, MapPin, CheckCircle, Plus, Minus, Trash2, X, Star, 
+  MessageSquare, LogIn, LogOut, Tag, ArrowLeft, ArrowUpRight, ShieldCheck, Heart, 
+  Layers, Package, Grid, Compass, Bath, Hammer, Workflow, Paintbrush, ChevronLeft, ChevronRight, SlidersHorizontal
+} from 'lucide-react';
 import { Product, CartItem, Order, Review, Qa } from './types';
 import { auth, loginWithGoogle, logoutUser } from './firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { motion } from 'motion/react';
+
+// Premium, custom inline vector icons for heavy-industry building materials business
+const RodSteelIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 select-none">
+    <path d="M4 14h16M4 18h16M4 10h16M4 6h16" strokeWidth="2.5" />
+    <path d="M6 4l2 12M11 4l2 12M16 4l2 12" strokeWidth="1.25" opacity="0.8" strokeDasharray="1 1" />
+  </svg>
+);
+
+const CementIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 select-none">
+    <rect x="5" y="3" width="14" height="18" rx="2" strokeWidth="2" />
+    <path d="M5 8h14M5 16h14" strokeWidth="1.5" />
+    <path d="M9 11h6" strokeWidth="2.5" />
+    <path d="M11 10h2M11 12h2" opacity="0.75" />
+  </svg>
+);
+
+const BricksIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 select-none">
+    <rect x="2" y="14" width="11" height="6" rx="1" strokeWidth="2" />
+    <rect x="14" y="14" width="8" height="6" rx="1" opacity="0.8" />
+    <rect x="6" y="6" width="12" height="6" rx="1" strokeWidth="2" />
+    <line x1="12" y1="6" x2="12" y2="12" />
+    <line x1="7" y1="14" x2="7" y2="20" />
+  </svg>
+);
+
+const SandIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 select-none">
+    <path d="M12 4L3 19h18L12 4z" strokeWidth="2" />
+    <circle cx="10" cy="14" r="1.2" fill="currentColor" />
+    <circle cx="14" cy="15" r="1" fill="currentColor" />
+    <circle cx="12" cy="11" r="1" fill="currentColor" />
+    <circle cx="8" cy="17" r="1" fill="currentColor" />
+    <circle cx="16" cy="17" r="1.2" fill="currentColor" />
+    <circle cx="12" cy="16" r="1" fill="currentColor" />
+  </svg>
+);
+
+const TilesIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 select-none">
+    <rect x="3" y="3" width="8" height="8" rx="1" strokeWidth="2" />
+    <rect x="13" y="3" width="8" height="8" rx="1" opacity="0.6" />
+    <path d="M3 13h18v2a6 6 0 0112 0v2H3v-4z" strokeWidth="1.75" />
+    <path d="M12 13v3" strokeWidth="1.5" />
+  </svg>
+);
+
+const ToolsIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 select-none">
+    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a1 1 0 0 0 0-1.4l-1.6-1.6a1 1 0 0 0-1.4 0z" />
+    <path d="M18.3 2.7L4 17l3 3L21.3 5.7M14.5 14.5l-9.8-1a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2l-1-9.8" />
+    <path d="M3 21l4-4M6 15l3 3" />
+  </svg>
+);
+
+const PipesIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 select-none">
+    <path d="M3 5h12v4H3z" strokeWidth="2" />
+    <path d="M15 7h4a2 2 0 012 2v10" strokeWidth="2" strokeLinecap="square" />
+    <path d="M19 19h2v2h-2z" fill="currentColor" />
+    <path d="M10 5V3M10 9v10M6 19h8v2H6z" />
+  </svg>
+);
+
+const PaintCoilsIcon = ({ size = 20 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 select-none">
+    <path d="M12 9a4 4 0 100 8 4 4 0 000-8z" strokeWidth="1.5" />
+    <path d="M12 6a7 7 0 100 14" strokeWidth="1.5" />
+    <path d="M5 3h6v4H5z" />
+    <path d="M8 7v4" strokeWidth="2" />
+  </svg>
+);
+
+interface MeshProductSliderRowProps {
+  products: Product[];
+  seed: number;
+  speed: number;
+  addToCart: (p: Product) => void;
+  setSelectedProduct: (p: Product) => void;
+  setDetailsTab: (tab: 'specs' | 'reviews' | 'qa') => void;
+  isConstructionRod: (p: Product) => boolean;
+}
+
+const MeshProductSliderRow: React.FC<MeshProductSliderRowProps> = ({ 
+  products, seed, speed, addToCart, setSelectedProduct, setDetailsTab, isConstructionRod 
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDown = useRef(false);
+  const startX = useRef(0);
+  const scrollLeftStart = useRef(0);
+  const lastActive = useRef(Date.now());
+
+  // Deterministically shuffle products to be fully mixed up ("elo melo vabe") and interesting
+  const rowProducts = useMemo(() => {
+    if (!products || products.length === 0) return [];
+    
+    const list = [...products];
+    // Simple robust LCG pseudo-random generator with the numeric seed
+    let s = seed;
+    const nextRandom = () => {
+      s = (s * 9301 + 49297) % 233280;
+      return s / 233280;
+    };
+
+    // Shuffle the list completely ("elo melo")
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(nextRandom() * (i + 1));
+      const temp = list[i];
+      list[i] = list[j];
+      list[j] = temp;
+    }
+
+    // Build a nice long repeatable baseline for the continuous glider
+    let baseList = [...list];
+    while (baseList.length < 12 && list.length > 0) {
+      baseList = [...baseList, ...list];
+    }
+    
+    // Duplicate 3 times for seamless warping in infinite scrolling
+    return [...baseList, ...baseList, ...baseList];
+  }, [products, seed]);
+
+  // Smooth, continuous automatic infinite loop that never pauses, calculating bounding layouts dynamically on each frame
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || rowProducts.length === 0) return;
+
+    // Initial positioning in the middle duplicate
+    const initialWidth = el.scrollWidth;
+    el.scrollLeft = initialWidth / 3;
+
+    let frameId: number;
+
+    const tick = () => {
+      if (el) {
+        const dynamicWidth = el.scrollWidth;
+        const oneThird = dynamicWidth / 3;
+        
+        // Continuous automated smooth infinite gliding. Optimized modifier for steady fluid movement
+        el.scrollLeft += speed * 0.72;
+
+        // Perfectly seamless warp checks
+        if (el.scrollLeft >= oneThird * 2) {
+          el.scrollLeft -= oneThird;
+        } else if (el.scrollLeft <= 0) {
+          el.scrollLeft += oneThird;
+        }
+      }
+      frameId = requestAnimationFrame(tick);
+    };
+
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [rowProducts, speed]);
+
+  // Drag listeners (retained as state registers but non-blocking to auto-glider scroll)
+  const startDragging = (clientX: number) => {
+    const el = containerRef.current;
+    if (!el) return;
+    isDown.current = true;
+    startX.current = clientX - el.offsetLeft;
+    scrollLeftStart.current = el.scrollLeft;
+    lastActive.current = Date.now();
+  };
+
+  const moveDragging = (clientX: number, e: { preventDefault: () => void }) => {
+    if (!isDown.current) return;
+    e.preventDefault();
+    const el = containerRef.current;
+    if (!el) return;
+    const x = clientX - el.offsetLeft;
+    const walk = (x - startX.current) * 1.5; // Drag sensitivity
+    el.scrollLeft = scrollLeftStart.current - walk;
+    lastActive.current = Date.now();
+  };
+
+  const stopDragging = () => {
+    isDown.current = false;
+    lastActive.current = Date.now();
+  };
+
+  if (rowProducts.length === 0) {
+    return <div className="p-4 text-center text-xs text-gray-400 font-bold uppercase animate-pulse">Consigned streams starting...</div>;
+  }
+
+  return (
+    <div className="relative group overflow-hidden select-none py-1">
+      <div 
+        ref={containerRef}
+        onMouseDown={(e) => startDragging(e.pageX)}
+        onMouseMove={(e) => moveDragging(e.pageX, e)}
+        onMouseUp={stopDragging}
+        onMouseLeave={stopDragging}
+        onTouchStart={(e) => startDragging(e.touches[0].pageX)}
+        onTouchMove={(e) => moveDragging(e.touches[0].pageX, e)}
+        onTouchEnd={stopDragging}
+        className="flex overflow-x-auto no-scrollbar gap-2 sm:gap-3 md:gap-4 py-2 px-1 cursor-grab active:cursor-grabbing select-none"
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        {rowProducts.map((p, idx) => {
+          const saveAmount = p.regularPrice - p.salePrice;
+          
+          return (
+            <div 
+              key={`${p.id}-slide-${idx}`}
+              className="w-[125px] sm:w-[170px] md:w-[195px] shrink-0 flex flex-col justify-between bg-white rounded-lg shadow-sm border border-gray-150 p-1 sm:p-1.5 hover:shadow-lg hover:border-red-500 transition-all duration-305 text-xs text-left"
+            >
+              <div className="relative">
+                {saveAmount > 0 ? (
+                  <div className="absolute top-1 left-1 bg-[#ef4a23] text-white text-[7px] sm:text-[8px] font-black px-1.5 py-0.5 rounded shadow-xs z-10 uppercase tracking-widest leading-none">
+                    Save: ৳{saveAmount.toLocaleString()}
+                  </div>
+                ) : (
+                  <div className="absolute top-1 left-1 bg-[#081621] text-white text-[7px] sm:text-[8px] font-black px-1.5 py-0.5 rounded shadow-xs z-10 uppercase tracking-widest leading-none">
+                    Approved
+                  </div>
+                )}
+                
+                {/* Noticeably taller image container with decreased margins/whitespace for larger photo view */}
+                <div 
+                  onClick={() => { setSelectedProduct(p); setDetailsTab('specs'); }}
+                  className="w-full h-28 sm:h-40 md:h-44 flex items-center justify-center overflow-hidden rounded bg-gray-50/20 p-0.5 cursor-pointer relative"
+                >
+                  <img 
+                    src={p.imageUrl} 
+                    alt={p.name} 
+                    loading="lazy"
+                    className="object-contain w-full h-full hover:scale-105 transition-transform duration-300 pointer-events-none" 
+                    referrerPolicy="no-referrer" 
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-1 mb-1 mt-1">
+                <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wide text-sky-700 bg-sky-50 px-1 py-0.5 rounded truncate max-w-[65%]">
+                  {p.brand || 'Consigned'}
+                </span>
+                <span className="text-[7px] sm:text-[8px] font-black px-1 py-0.5 rounded tracking-widest bg-emerald-50 text-emerald-800">
+                  {p.availability || 'In Stock'}
+                </span>
+              </div>
+
+              <h3 
+                onClick={() => { setSelectedProduct(p); setDetailsTab('specs'); }}
+                className="text-gray-900 font-extrabold text-[9px] sm:text-[11px] leading-tight line-clamp-2 hover:text-[#ef4a23] cursor-pointer transition-colors mb-1 min-h-[22px] sm:min-h-[28px]"
+              >
+                {p.name}
+              </h3>
+
+              <div className="mb-1.5">
+                <span className="text-[10px] sm:text-xs font-black text-red-650 font-mono">
+                  ৳{p.salePrice.toLocaleString()} ({p.unit || (isConstructionRod(p) ? 'KG' : 'Pcs')})
+                </span>
+              </div>
+
+              <button 
+                onClick={() => addToCart(p)}
+                disabled={p.availability !== 'In Stock'}
+                className={`w-full font-extrabold py-1 rounded text-[8px] sm:text-[10px] transition-all uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer ${
+                  p.availability === 'In Stock' 
+                    ? 'bg-[#ef4a23] hover:bg-[#d83c17] active:scale-95 text-white' 
+                     : 'bg-gray-150 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                🛒 Add
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
   const { 
@@ -16,7 +296,16 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
     reviews, 
     qas, 
     addReview, 
-    addQuestion 
+    addQuestion,
+    aboutUsTitle,
+    aboutUsText,
+    aboutUsPhotoUrl,
+    facebookUrl,
+    youtubeUrl,
+    otherUrl,
+    homeOwnerPhotoUrl,
+    homeOwnerText,
+    homeOwnerTitle
   } = useStore();
 
   const isConstructionRod = (product: Product) => {
@@ -40,6 +329,210 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
   const [sortMethod, setSortMethod] = useState<'Default' | 'Price L-H' | 'Price H-L'>('Default');
   const [displayCount, setDisplayCount] = useState<20 | 50 | 100>(20);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Restructured site layout navigation and filtering states
+  const [currentTab, setCurrentTab] = useState<'home' | 'shop' | 'contact' | 'about'>('home');
+  const [priceRange, setPriceRange] = useState<number>(250000);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Home Screen Carousel slides
+  const promoSlides = [
+    {
+      title: "PREMIUM CONSTRUCTION STEEL REINFORCEMENT",
+      desc: "Order standard-certified BSRM Xtreme 500W deformed reinforcement bars directly. Ensuring maximum security, shear resistance, and concrete-gripping strength for commercial foundations in Gopalganj & Faridpur.",
+      badge: "Deal Of The Month",
+      offer: "Best price per ton with door-to-door transit truck delivery.",
+      cta: "Explore Steel Catalog",
+      categoryTarget: "Rod & Structural Steel",
+      img: "https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?auto=format&fit=crop&q=80&w=1200",
+      bgGradient: "from-[#081621] via-[#0d2235] to-[#041120]",
+    },
+    {
+      title: "ULTIMATE STRUCTURAL BINDING CEMENT",
+      desc: "Discover Seven Rings Gold, Akij, and Anchor Premium composite cement sacks. Expertly balanced binders with rapid setting profiles and high structural reliability for solid load-bearing pillars and roofs.",
+      badge: "Bulk Save Extra",
+      offer: "Get ৳15 off per bag on bookings above 300 sacks with free sand loaders.",
+      cta: "Explore Cement Catalog",
+      categoryTarget: "Cement",
+      img: "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&q=80&w=1200",
+      bgGradient: "from-[#1a1112] via-[#2d1112] to-[#120506]",
+    }
+  ];
+
+  // Auto-rotate effect for the hero slider banner
+  useEffect(() => {
+    if (currentTab !== 'home') return;
+    const interval = setInterval(() => {
+      setCurrentSlide(prev => (prev + 1) % promoSlides.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [currentTab]);
+
+  // helper to get icon, color and metadata for real dynamic categories from the store/database
+  const getCategoryDetails = (catName: string) => {
+    const normalized = catName.toLowerCase();
+    
+    if (normalized.includes('steel') || normalized.includes('rod')) {
+      return {
+        name: catName,
+        desc: "High-grade structural steel and deformed bars",
+        icon: RodSteelIcon,
+        color: "text-red-600 bg-red-50 border-red-200"
+      };
+    }
+    if (normalized.includes('cement')) {
+      return {
+        name: catName,
+        desc: "Premium Portland composites & binders",
+        icon: CementIcon,
+        color: "text-amber-600 bg-amber-50 border-amber-200"
+      };
+    }
+    if (normalized.includes('bricks') || normalized.includes('brick') || normalized.includes('block')) {
+      return {
+        name: catName,
+        desc: "Standard clay bricks & autoclaved blocks",
+        icon: BricksIcon,
+        color: "text-orange-600 bg-orange-50 border-orange-200"
+      };
+    }
+    if (normalized.includes('sand') || normalized.includes('aggregate')) {
+      return {
+        name: catName,
+        desc: "Fine river sand & crushed aggregates",
+        icon: SandIcon,
+        color: "text-yellow-700 bg-yellow-50 border-yellow-200"
+      };
+    }
+    if (normalized.includes('tiles') || normalized.includes('sanitary') || normalized.includes('bath') || normalized.includes('pot') || normalized.includes('toilet') || normalized.includes('basin')) {
+      return {
+        name: catName,
+        desc: "Polished flooring & bathroom fixtures",
+        icon: TilesIcon,
+        color: "text-indigo-600 bg-indigo-50 border-indigo-200"
+      };
+    }
+    if (normalized.includes('hardware') || normalized.includes('tool') || normalized.includes('equip') || normalized.includes('hammer') || normalized.includes('wrench')) {
+      return {
+        name: catName,
+        desc: "Industrial hammers, wrenches & supplies",
+        icon: ToolsIcon,
+        color: "text-slate-600 bg-slate-50 border-slate-200"
+      };
+    }
+    if (normalized.includes('pipes') || normalized.includes('fitting') || normalized.includes('elbow') || normalized.includes('plug') || normalized.includes('unions')) {
+      return {
+        name: catName,
+        desc: "Heavy-duty uPVC and elbow connectors",
+        icon: PipesIcon,
+        color: "text-teal-600 bg-teal-50 border-teal-200"
+      };
+    }
+    if (normalized.includes('paint') || normalized.includes('coil') || normalized.includes('wiring') || normalized.includes('wire')) {
+      return {
+        name: catName,
+        desc: "Protective bucket paints & electrical wiring",
+        icon: PaintCoilsIcon,
+        color: "text-pink-600 bg-pink-50 border-pink-200"
+      };
+    }
+    
+    // Fallback icon and colors for newly added custom categories
+    return {
+      name: catName,
+      desc: `Premium authorized ${catName} supplies`,
+      icon: CementIcon,
+      color: "text-sky-600 bg-sky-50 border-sky-200"
+    };
+  };
+
+  const handleCategoryClick = (catName: string) => {
+    setActiveCategory(catName);
+    setSearchQuery('');
+    setActiveBrand('All');
+    setStockFilter('All');
+    setPriceRange(250000);
+    setCurrentTab('shop');
+    setIsCheckout(false);
+    setIsProfileOpen(false);
+    setSelectedProduct(null);
+  };
+
+  // Deterministic seed-based shuffling to generate high-mesh, decoupled row arrays
+  const generateSmartMeshRow = (prodList: Product[], rowSeed: number): Product[] => {
+    if (!prodList || prodList.length === 0) return [];
+    
+    // Fallback if inventory size is extremely sparse
+    if (prodList.length < 3) {
+      const fallbackList: Product[] = [];
+      for (let i = 0; i < 350; i++) {
+        fallbackList.push({ ...prodList[i % prodList.length], id: `mesh-p-${rowSeed}-${i}` });
+      }
+      return fallbackList;
+    }
+
+    // Decoupled shuffling order for each row using deterministic sin logic
+    let working = [...prodList].sort((a, b) => {
+      const codeA = a.name.charCodeAt(0) + a.name.charCodeAt(a.name.length - 1);
+      const codeB = b.name.charCodeAt(0) + b.name.charCodeAt(b.name.length - 1);
+      return Math.sin(codeA * rowSeed) - Math.sin(codeB * rowSeed);
+    });
+
+    const meshed: Product[] = [];
+    const pool = [...working];
+
+    // Anti-clusters sequencing
+    while (pool.length > 0) {
+      let chosenIdx = 0;
+      if (meshed.length > 0) {
+        const lastItem = meshed[meshed.length - 1];
+        let found = pool.findIndex(x => x.category !== lastItem.category && x.brand !== lastItem.brand);
+        if (found === -1) {
+          found = pool.findIndex(x => x.category !== lastItem.category);
+        }
+        if (found === -1) {
+          found = pool.findIndex(x => x.brand !== lastItem.brand);
+        }
+        if (found !== -1) {
+          chosenIdx = found;
+        }
+      }
+      meshed.push(pool[chosenIdx]);
+      pool.splice(chosenIdx, 1);
+    }
+
+    // Multiply the meshed sequence up to 350 items sequentially
+    const sequenceList: Product[] = [];
+    for (let i = 0; i < 350; i++) {
+      const baseItem = meshed[i % meshed.length];
+      sequenceList.push({ ...baseItem, id: `${baseItem.id}-mesh-row-${rowSeed}-${i}` });
+    }
+
+    // Final boundary pass to fix adjacent wrap glitches
+    for (let i = 1; i < sequenceList.length; i++) {
+      const prev = sequenceList[i - 1];
+      const curr = sequenceList[i];
+      if (curr.category === prev.category || curr.brand === prev.brand) {
+        // Search subsequent candidates up to 20 spaces
+        for (let j = i + 1; j < Math.min(sequenceList.length, i + 20); j++) {
+          const candidate = sequenceList[j];
+          const nextOfCand = sequenceList[j + 1];
+          if (
+            candidate.category !== prev.category && 
+            candidate.brand !== prev.brand &&
+            (nextOfCand ? candidate.category !== nextOfCand.category : true)
+          ) {
+            sequenceList[i] = candidate;
+            sequenceList[j] = curr;
+            break;
+          }
+        }
+      }
+    }
+
+    return sequenceList;
+  };
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -90,6 +583,9 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
   
   // Filter by stock
   if (stockFilter !== 'All') filtered = filtered.filter(p => p.availability === stockFilter);
+
+  // Filter by dynamic Price Range slider
+  filtered = filtered.filter(p => p.salePrice <= priceRange);
   
   // Filter by Search Query
   if (searchQuery.trim() !== '') {
@@ -330,147 +826,162 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
   return (
     <div className="min-h-screen bg-[#f2f4f8] flex flex-col font-sans relative text-gray-900 select-none">
       
-      {/* Top Banner Alert Segment */}
-      <div className="bg-[#ef4a23] text-white text-xs py-2 px-4 text-center font-bold tracking-wide flex items-center justify-center gap-1">
-        🔥 Mega Project Offer! Special discount on ordering 10 tons of BSRM steel rods or Seven Rings cement! Hotline: +880-1988030534
-      </div>
-
       {/* Main Header (Pure Star Tech Style Architecture) */}
-      <header className="bg-[#081621] text-white sticky top-0 z-30 shadow-md border-b border-orange-500/10">
-        <div className="max-w-7xl mx-auto px-4 py-2 md:py-4 flex flex-col md:flex-row justify-between items-center gap-2 md:gap-4">
+      <header className="bg-gradient-to-r from-[#081621] via-[#0d2232] to-[#081621] text-white sticky top-0 z-30 shadow-2xl border-t-2 border-[#ef4a23] border-b border-orange-500/10 py-3 sm:py-5 md:py-6 select-none select-none">
+        <div className="max-w-7xl mx-auto px-4 flex flex-row items-center justify-between gap-2 sm:gap-4 flex-nowrap">
           
-          {/* Logo and Brand Identity, plus mobile inline quick actions */}
-          <div className="flex items-center justify-between w-full md:w-auto">
-             <div className="cursor-pointer" onClick={() => { setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}>
-                <h1 className="text-lg md:text-2xl font-black tracking-tight text-white m-0 leading-none hover:text-[#ef4a23] transition-colors">
+          {/* Logo, Brand Identity, & Navigation Tabs next to it */}
+          <div className="flex flex-row items-center gap-3 sm:gap-5 md:gap-8 shrink-0">
+             <div className="cursor-pointer shrink-0 flex flex-col justify-center" onClick={() => { setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}>
+                <h1 className="text-sm sm:text-lg md:text-2xl font-black tracking-tight text-white m-0 leading-none hover:text-[#ef4a23] transition-colors whitespace-nowrap">
                   মেসার্স হাসিনা ট্রেডার্স
                 </h1>
-                <p className="text-[#ef4a23] text-[9px] md:text-xs font-bold mt-0.5 md:mt-1 tracking-wider md:tracking-widest uppercase">M/S Hasina Traders • Est. 1996</p>
+                <div className="h-1.5 sm:h-2"></div>
+                <p className="text-gray-300 text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest leading-none">
+                  M/S Hasina Traders
+                </p>
              </div>
 
-             {/* Quick Actions for Mobile Devices on same row to save vertical fold */}
-             <div className="flex md:hidden items-center gap-3">
-                {/* Cart Flow Action */}
-                <button 
-                  onClick={() => setIsCartOpen(true)} 
-                  className="relative p-1.5 text-white hover:text-[#ef4a23] transition-colors"
-                  title="View Cart"
-                >
-                  <ShoppingCart size={18} />
-                  {cartItemCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-[#ef4a23] text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-                      {cartItemCount}
-                    </span>
-                  )}
-                </button>
+             {/* Header Navigation Menu right next to the Brand name with no overflow scroll or swipe system */}
+             <div className="flex bg-[#0c1e2d] p-0.5 rounded-lg border border-gray-800 shadow-inner flex-nowrap">
+               <button 
+                 onClick={() => { 
+                   setCurrentTab('home'); 
+                   setIsCheckout(false); 
+                   setIsProfileOpen(false); 
+                   setSelectedProduct(null); 
+                 }}
+                 className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-3 py-1 rounded text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
+                   currentTab === 'home' && !isCheckout && !isProfileOpen && !selectedProduct
+                     ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
+                     : 'text-gray-400 hover:text-white hover:bg-white/5'
+                 }`}
+               >
+                 🏡 Home
+               </button>
 
-                {/* Profile Dashboard flow */}
-                {currentUser ? (
-                  <button 
-                    onClick={() => { setIsProfileOpen(!isProfileOpen); setIsCheckout(false); setSelectedProduct(null); }}
-                    className={`text-white hover:text-[#ef4a23] p-1 ${isProfileOpen ? 'text-[#ef4a23]' : ''}`}
-                    title="Account Dashboard"
-                  >
-                    <User size={16} />
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => { setIsAuthModalOpen(true); setAuthTab('login'); }}
-                    className="text-white hover:text-[#ef4a23] p-1"
-                    title="Login"
-                  >
-                    <LogIn size={16} />
-                  </button>
-                )}
+               <button 
+                 onClick={() => { 
+                   setCurrentTab('shop'); 
+                   setIsCheckout(false); 
+                   setIsProfileOpen(false); 
+                   setSelectedProduct(null); 
+                 }}
+                 className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-3 py-1 rounded text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
+                   currentTab === 'shop' && !isCheckout && !isProfileOpen && !selectedProduct
+                     ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
+                     : 'text-gray-400 hover:text-white hover:bg-white/5'
+                 }`}
+               >
+                 🛍️ Shop
+               </button>
 
-                {/* Secure Admin Portal Link */}
-                <button onClick={onOpenAdmin} className="text-gray-400 hover:text-white p-1" title="Admin Dashboard">
-                  <svg size={16} className="w-4 h-4 fill-current inline-block" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
-                </button>
+               <button 
+                 onClick={() => { 
+                   setCurrentTab('contact'); 
+                   setIsCheckout(false); 
+                   setIsProfileOpen(false); 
+                   setSelectedProduct(null); 
+                 }}
+                 className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-3 py-1 rounded text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
+                   currentTab === 'contact' && !isCheckout && !isProfileOpen && !selectedProduct
+                     ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
+                     : 'text-gray-400 hover:text-white hover:bg-white/5'
+                 }`}
+               >
+                 📞 Contact
+               </button>
+
+               <button 
+                 onClick={() => { 
+                   setCurrentTab('about'); 
+                   setIsCheckout(false); 
+                   setIsProfileOpen(false); 
+                   setSelectedProduct(null); 
+                 }}
+                 className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-3 py-1 rounded text-[8px] sm:text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
+                   currentTab === 'about' && !isCheckout && !isProfileOpen && !selectedProduct
+                     ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
+                     : 'text-gray-400 hover:text-white hover:bg-white/5'
+                 }`}
+               >
+                 ℹ️ About Us
+               </button>
              </div>
           </div>
 
-          {/* Elastic Star Tech Search Engine (Extremely compact on mobile) */}
-          <div className="flex-1 w-full max-w-lg mx-0 md:mx-6 relative">
-             <input 
-               type="text" 
-               placeholder="Search rods, cement, categories, or brands..." 
-               value={searchQuery}
-               onChange={e => setSearchQuery(e.target.value)}
-               className="w-full bg-[#112335] text-white rounded py-1.5 md:py-2.5 px-3 md:px-4 pr-10 outline-none text-xs md:text-sm placeholder:text-gray-400 focus:bg-white focus:text-[#081621] focus:ring-1 focus:ring-[#ef4a23] border border-transparent focus:border-transparent transition-all"
-             />
-             <Search size={16} className="absolute right-3 top-2 md:top-3 text-gray-400 cursor-pointer pointer-events-none"/>
+          {/* Premium Glowing Hotline Display - Integrated in the same single line */}
+          <div className="hidden lg:flex items-center gap-2 bg-[#ef4a23]/10 border border-[#ef4a23]/30 px-3 py-1.5 rounded-lg shadow-inner shrink-0">
+             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+             <div className="flex flex-col text-left">
+               <span className="text-[8px] uppercase font-black tracking-widest text-[#ef4a23] leading-none">Building Materials Hotline</span>
+               <a href="tel:+8801988030534" className="font-mono text-xs font-black text-white hover:text-[#ef4a23] mt-1 transition-colors leading-none">
+                 +880-1988030534
+               </a>
+             </div>
           </div>
 
-          {/* Communication Controls & Auth Segment - Hidden on Mobile to maximize screen fold */}
-          <div className="hidden md:flex gap-4 items-center">
-             <div className="flex flex-col text-right hidden lg:flex border-r border-[#1e2e3d] pr-4">
-               <span className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Steel & Cement Hotline</span>
-               <span className="font-extrabold text-white text-sm">+880-1988030534</span>
-             </div>
+          {/* Quick Actions (Cart, Profile, Admin) inline with no Google Auth Badge */}
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
              
-             {/* Cart Trigger */}
-             <button onClick={() => setIsCartOpen(true)} className="relative flex items-center gap-2 text-white hover:text-[#ef4a23] p-1.5 rounded transition-colors group">
-               <ShoppingCart size={22} className="group-hover:-translate-y-0.5 transition-transform" />
-               <div className="absolute -top-1 -right-1.5 bg-[#ef4a23] text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-[#081621]">
-                 {cartItemCount}
-               </div>
-               {cartItemCount > 0 && <span className="text-xs font-sans font-black hidden sm:inline text-white">৳{cartTotal.toLocaleString()}</span>}
+             {/* Mobile Hotline Quick Action Icon - Visible on small screens */}
+             <div className="flex lg:hidden items-center">
+               <a 
+                 href="tel:+8801988030534" 
+                 className="flex items-center gap-1 bg-[#ef4a23]/20 border border-[#ef4a23]/40 p-1.5 rounded-md hover:bg-[#ef4a23] transition-all"
+                 title="Call Hotline"
+               >
+                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                 <span className="font-mono text-[9px] sm:text-[10px] font-black text-white">+880-1988030534</span>
+               </a>
+             </div>
+
+             {/* Cart Flow Action */}
+             <button 
+               onClick={() => setIsCartOpen(true)} 
+               className="relative p-1.5 text-white hover:text-[#ef4a23] transition-colors shrink-0"
+               title="View Cart"
+             >
+               <ShoppingCart size={18} />
+               {cartItemCount > 0 && (
+                 <span className="absolute -top-1 -right-1 bg-[#ef4a23] text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                   {cartItemCount}
+                 </span>
+               )}
              </button>
 
-             {/* User Profile Tracking / Dynamic Dashboard trigger */}
+             {/* Profile Dashboard flow */}
              {currentUser ? (
-               <div className="flex items-center gap-2 border-l border-gray-800 pl-4">
+               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                  <button 
                    onClick={() => { setIsProfileOpen(!isProfileOpen); setIsCheckout(false); setSelectedProduct(null); }}
-                   className={`flex items-center gap-1.5 text-xs font-black uppercase text-white hover:text-[#ef4a23] px-3 py-1.5 rounded border ${isProfileOpen ? 'border-[#ef4a23] text-[#ef4a23]' : 'border-gray-800 bg-[#112335]'} transition-all`}
+                   className={`flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase text-white hover:text-[#ef4a23] px-1.5 py-1 rounded border ${isProfileOpen ? 'border-[#ef4a23] text-[#ef4a23]' : 'border-gray-800 bg-[#112335]'} transition-all`}
                  >
-                   <User size={14} className="text-[#ef4a23]" />
-                   <span className="max-w-[80px] truncate">{currentUser.displayName || 'Account'}</span>
+                   <User size={13} className="text-[#ef4a23]" />
+                   <span className="max-w-[50px] sm:max-w-[80px] truncate hidden xs:inline">{currentUser.displayName || 'User'}</span>
                  </button>
-                 <button onClick={handleLogout} className="p-1.5 hover:text-red-500 text-gray-400 transition-colors" title="Log Out">
-                   <LogOut size={16} />
+                 <button onClick={handleLogout} className="p-1 hover:text-red-500 text-gray-400 transition-colors shrink-0" title="Log Out">
+                   <LogOut size={14} />
                  </button>
                </div>
              ) : (
                <button 
                  onClick={() => { setIsAuthModalOpen(true); setAuthTab('login'); }}
-                 className="flex items-center gap-1.5 hover:text-[#ef4a23] border border-gray-800 text-xs font-black tracking-wide bg-[#112335] text-white py-1.5 px-3 rounded shadow-inner transition-colors"
+                 className="flex items-center gap-1 hover:text-[#ef4a23] border border-gray-850 text-[10px] sm:text-xs font-black tracking-wide bg-[#112335] text-white py-1 px-2 rounded shadow-inner transition-colors shrink-0"
                >
-                 <LogIn size={14} className="text-[#ef4a23]"/>
-                 Login / Register
+                 <LogIn size={13} className="text-[#ef4a23]"/>
+                 <span className="hidden xs:inline">Login</span>
                </button>
              )}
 
              {/* Secure Admin Portal Link */}
-             <button onClick={onOpenAdmin} className="text-gray-400 hover:text-white p-1 rounded transition-colors" title="Admin Dashboard">
-               <svg size={20} className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+             <button onClick={onOpenAdmin} className="text-gray-400 hover:text-white p-1 shrink-0" title="Admin Dashboard">
+               <svg size={16} className="w-4 h-4 fill-current inline-block" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
              </button>
           </div>
-        </div>
-        
-        {/* Responsive Navbar Categories Rail */}
-        <div className="border-t border-white/5 bg-[#0a1e2e]">
-          <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto no-scrollbar py-0.5">
-             <button 
-               onClick={() => { setActiveCategory('All'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }} 
-               className={`px-3 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-xs font-black uppercase tracking-wider whitespace-nowrap transition-colors hover:text-[#ef4a23] ${activeCategory === 'All' && !isCheckout && !isProfileOpen && !selectedProduct ? 'text-[#ef4a23] border-b-2 border-[#ef4a23]' : 'text-gray-300'}`}
-             >
-               All Categories
-             </button>
-             {categories.map(c => (
-               <button 
-                 key={c} 
-                 onClick={() => { setActiveCategory(c); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }} 
-                 className={`px-3 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-xs font-black uppercase tracking-wider whitespace-nowrap transition-colors hover:text-[#ef4a23] ${activeCategory === c && !isCheckout && !isProfileOpen && !selectedProduct ? 'text-[#ef4a23] border-b-2 border-[#ef4a23]' : 'text-gray-300'}`}
-               >
-                 {c}
-               </button>
-             ))}
-          </div>
+
         </div>
       </header>
-
       {/* Notifications overlay system */}
       {showNotification && (
         <div className="fixed bottom-10 right-10 bg-gray-950 text-white px-6 py-4 rounded-lg shadow-2xl z-50 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 border-l-4 border-green-500 max-w-sm">
@@ -939,69 +1450,523 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
              </div>
           </div>
         ) : !isCheckout ? (
-          /* SWITCH CASE 3: PRODUCT CATALOG (PUBLIC DISCOVERY MODULE) */
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Left Sidebar compact responsive layout for mobile friendliness */}
-            <aside className="hidden md:block w-full md:w-64 shrink-0 space-y-4">
-              
-              {/* Availability Filter Block made smaller for mobile scaling */}
-              <div className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-gray-200">
-                 <h3 className="font-extrabold text-xs uppercase tracking-widest text-[#081621] border-b pb-2 mb-3">Availability</h3>
-                 <div className="space-y-2">
-                   {['All', 'In Stock', 'Pre Order', 'Upcoming'].map(s => (
-                     <label key={s} className="flex items-center gap-2 cursor-pointer group select-none">
+          currentTab === 'home' ? (
+            /* SWITCH CASE 3: PREMIUM HOME EXPERIENCE LANDING PAGE (Offline/Online Double Active) */
+            <div className="space-y-6 md:space-y-8">
+
+              {/* SECTION 1: DYNAMIC "FEATURED CATEGORY" INTERFACE */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
+                  <h2 className="text-lg md:text-xl font-black text-[#081621] tracking-tight font-sans">Featured Categories</h2>
+                  <span className="text-gray-400 text-[10px] font-bold font-mono uppercase bg-gray-100 py-1 px-2.5 rounded">{categories.length} Sectors</span>
+                </div>
+
+                {/* Ultra-compact horizontal category badges to minimize height so Featured Products is visible alongside it on first viewport entry */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 px-0.5">
+                  {categories.map((catName, idx) => {
+                    const cat = getCategoryDetails(catName);
+                    const CatIcon = cat.icon;
+                    return (
+                      <div 
+                        key={idx}
+                        onClick={() => handleCategoryClick(catName)}
+                        className="bg-white border border-gray-180 hover:border-red-300 rounded-lg p-1.5 flex items-center gap-2 cursor-pointer shadow-xs hover:shadow-md transition-all duration-300 group hover:-translate-y-0.5 sm:justify-start"
+                      >
+                        <div className={`p-1.5 rounded-md ${cat.color} group-hover:scale-105 transition-transform duration-300 border flex items-center justify-center shrink-0 h-7 w-7`}>
+                          <CatIcon size={14} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-extrabold text-[10px] sm:text-[11px] text-[#081621] tracking-tight leading-tight group-hover:text-[#ef4a23] transition-colors font-sans break-words pr-1">{catName}</h3>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* SECTION 2: FEATURED PRODUCTS INFINITE GLIDERS */}
+              <div className="space-y-4 py-1 overflow-hidden">
+                <div className="flex justify-between items-center border-b border-gray-200 pb-2.5">
+                  <h2 className="text-lg md:text-xl font-black text-[#081621] tracking-tight flex items-center gap-1 font-sans">
+                    Featured Products
+                  </h2>
+                </div>
+
+                {/* 3 Parallel Infinite Glide Loops with Shuffled Sequences and Alternating Scroll Directions */}
+                <div className="space-y-3 relative select-text font-sans">
+                  
+                  {/* Row 1 - Seed 101 - Slides Left (Positive medium-fast speed) */}
+                  <div>
+                    <MeshProductSliderRow 
+                      products={products} 
+                      seed={101} 
+                      speed={1.6} 
+                      addToCart={addToCart}
+                      setSelectedProduct={setSelectedProduct}
+                      setDetailsTab={setDetailsTab}
+                      isConstructionRod={isConstructionRod}
+                    />
+                  </div>
+
+                  {/* Row 2 - Seed 202 - Slides Right (Negative medium-fast speed) */}
+                  <div>
+                    <MeshProductSliderRow 
+                      products={products} 
+                      seed={202} 
+                      speed={-1.6} 
+                      addToCart={addToCart}
+                      setSelectedProduct={setSelectedProduct}
+                      setDetailsTab={setDetailsTab}
+                      isConstructionRod={isConstructionRod}
+                    />
+                  </div>
+
+                  {/* Row 3 - Seed 303 - Slides Left (Positive medium-fast speed) */}
+                  <div>
+                    <MeshProductSliderRow 
+                      products={products} 
+                      seed={303} 
+                      speed={1.6} 
+                      addToCart={addToCart}
+                      setSelectedProduct={setSelectedProduct}
+                      setDetailsTab={setDetailsTab}
+                      isConstructionRod={isConstructionRod}
+                    />
+                  </div>
+
+                </div>
+              </div>
+
+              {/* SECTION 3: PREMIUM OWNER SHOWCASE BANNER */}
+              <div className="bg-gradient-to-br from-[#081621] to-[#0c1e2d] text-white rounded-2xl shadow-xl overflow-hidden border-b-4 border-[#ef4a23] mt-8 text-left font-sans">
+                <div className="flex flex-col md:flex-row items-stretch">
+                  {/* Left Side: Owner Profile Landscape image inside a cool frame */}
+                  <div className="w-full md:w-[42%] shrink-0 relative min-h-[220px] sm:min-h-[280px] md:min-h-full">
+                    <img 
+                      src={homeOwnerPhotoUrl || "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&q=80&w=1200"} 
+                      alt="MS Hasina Traders Proprietor" 
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 hover:scale-[1.02]"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-black/85 via-black/20 to-transparent"></div>
+                    {/* Floating badge inside the landscape container */}
+                    <div className="absolute bottom-4 left-4 sm:bottom-6 sm:left-6 z-10">
+                      <span className="bg-[#ef4a23] text-white text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded shadow-md border border-[#ef4a23]/30">
+                        Reliable Leader Since 1996
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Side: Mid range premium message paragraph */}
+                  <div className="flex-1 p-6 sm:p-8 md:p-10 flex flex-col justify-center space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-[#ef4a23] uppercase tracking-widest">PROPRIETOR'S MESSAGE</p>
+                      <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white leading-tight">
+                        {homeOwnerTitle || "মেসার্স হাসিনা ট্রেডার্স-এর চেয়ারম্যান ও প্রোপরাইটর বাবুল মাতুব্বর"}
+                      </h3>
+                    </div>
+                    
+                    <p className="text-gray-300 text-xs sm:text-sm leading-relaxed font-semibold whitespace-pre-line text-justify">
+                      {homeOwnerText || "বিগত ৩ দশক ধরে আমরা অত্যন্ত সততা ও বিশ্বস্ততার সাথে গোপালগঞ্জ, ফরিদপুর ও পার্শ্ববর্তী অঞ্চলে বিশ্বখ্যাত রড, সেরা ব্র্যান্ডের কোয়ালিটি সিমেন্ট এবং স্যানিটারি সামগ্রী সরবরাহ করে আসছি। গুণগত মান ও ওজনে বিন্দুমাত্র ছাড় না দিয়ে দেশের উন্নয়ন কার্যক্রমে সরাসরি অংশীদার থাকাই আমাদের সর্বোচ্চ অঙ্গীকার। কাঙ্ক্ষিত সময়ে ও নিরাপদ ডেলিভারির নিশ্চয়তার মাধ্যমে আপনার কষ্টের টাকায় গড়া স্বপ্নের প্রতিটি স্থাপনা মজবুত ও দীর্ঘস্থায়ী করার লক্ষ্যে আমরা অবিরাম কাজ করে যাচ্ছি। যেকোনো নির্মাণ প্রকল্পে আমাদের পরামর্শ ও সহযোগিতার জন্য সরাসরি হটলাইনে যোগাযোগ করুন।"}
+                    </p>
+
+                    <div className="flex items-center gap-3 pt-2">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-wider">Contact Direct</span>
+                        <a href="tel:+8801988030534" className="font-mono text-sm sm:text-base font-black text-white hover:text-[#ef4a23] transition-colors leading-none mt-1">
+                          +880-1988030534
+                        </a>
+                      </div>
+                      <span className="text-gray-700">|</span>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] sm:text-xs text-gray-400 font-bold uppercase tracking-wider">Location Status</span>
+                        <span className="text-emerald-500 font-bold text-xs flex items-center gap-1 mt-0.5">
+                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> Batikamari Bazar
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Corporate Footer Trust Badges */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 border-t border-gray-200 pt-8 text-left font-sans">
+                <div className="flex items-start gap-3">
+                  <div className="bg-[#ef4a23]/10 text-[#ef4a23] p-2 rounded-lg"><ShieldCheck size={20}/></div>
+                  <div>
+                    <h4 className="font-extrabold text-xs text-[#081621] uppercase tracking-wide">100% Licensed & Standardized</h4>
+                    <p className="text-[11px] text-gray-500 mt-1">Every consignment carries BUET test reports & certified mill approvals.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-[#ef4a23]/10 text-[#ef4a23] p-2 rounded-lg font-mono font-bold">৳</div>
+                  <div>
+                    <h4 className="font-extrabold text-xs text-[#081621] uppercase tracking-wide">No Hidden Middlemen Costs</h4>
+                    <p className="text-[11px] text-gray-500 mt-1">Real-time fair wholesale rates directly comparable with Bangladesh market sheets.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="bg-[#ef4a23]/10 text-[#ef4a23] p-2 rounded-lg"><Phone size={18}/></div>
+                  <div>
+                    <h4 className="font-extrabold text-xs text-[#081621] uppercase tracking-wide">Emergency Site Logistics</h4>
+                    <p className="text-[11px] text-gray-500 mt-1">Gopalganj- Faridpur district supply trucks available 24/7. Phone support included.</p>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          ) : currentTab === 'contact' ? (
+            /* SWITCH CASE 5: CONTACT & ADDRESS TAB VIEW */
+            <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden text-left font-sans animate-in fade-in slide-in-from-top-4 duration-305">
+              <div className="bg-[#081621] text-white p-6 md:p-8 relative overflow-hidden border-b-4 border-[#ef4a23]">
+                <div className="absolute top-0 right-0 opacity-10 translate-x-12 -translate-y-12 select-none pointer-events-none">
+                  <Phone size={240} className="text-white" />
+                </div>
+                <div className="relative z-10 max-w-xl space-y-2">
+                  <span className="bg-[#ef4a23] text-white font-black text-[9px] uppercase tracking-widest px-2.5 py-1 rounded">24/7 Hotline Support</span>
+                  <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight">Contact & Address Details</h1>
+                  <p className="text-gray-300 text-xs sm:text-sm leading-relaxed font-semibold">
+                    Have bulk requirements or custom construction site requests? Get in touch with our representative or Bablu Matubbor directly.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 md:p-8 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Address Box */}
+                  <div className="border border-gray-200 rounded-xl p-5 bg-gray-50/50 space-y-4">
+                    <h3 className="font-extrabold text-sm text-[#081621] uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+                      <MapPin size={16} className="text-[#ef4a23]" /> Physical Warehouse
+                    </h3>
+                    <div className="space-y-2">
+                      <p className="text-sm font-extrabold text-gray-800">M/S Hasina Traders</p>
+                      <p className="text-xs text-gray-650 leading-normal font-semibold">
+                        Batikamari Bazar, Batikamari, Gopalganj Sadar,<br />
+                        Gopalganj, Bangladesh
+                      </p>
+                      <p className="text-[11px] text-gray-400 font-bold">
+                        (Conveniently located near the primary highway junction for easy sand loader & steel delivery truck access).
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Contact Numbers Box */}
+                  <div className="border border-gray-200 rounded-xl p-5 bg-gray-50/50 space-y-4">
+                    <h3 className="font-extrabold text-sm text-[#081621] uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+                      <Phone size={16} className="text-[#ef4a23]" /> Mobile & Email
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-2.5">
+                        <span className="bg-orange-50 text-[#ef4a23] font-bold text-[9px] uppercase px-1.5 py-0.5 rounded border border-orange-100 shrink-0 mt-0.5">Primary</span>
+                        <div>
+                          <p className="text-sm font-black text-gray-800 font-mono">+880-1988030534</p>
+                          <p className="text-[10px] text-gray-400 font-semibold font-sans">Proprietor: Bablu Matubbor</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <span className="bg-sky-50 text-sky-700 font-bold text-[9px] uppercase px-1.5 py-0.5 rounded border border-sky-100 shrink-0 mt-0.5">Backup</span>
+                        <div>
+                          <p className="text-sm font-black text-gray-800 font-mono">+880-1996418168</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2.5">
+                        <span className="bg-emerald-50 text-emerald-700 font-bold text-[9px] uppercase px-1.5 py-0.5 rounded border border-emerald-100 shrink-0 mt-0.5">Email</span>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800 font-sans">tradersmshasina@gmail.com</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live Message form / Inquiry Form */}
+                <div className="border border-gray-200 rounded-xl p-6 bg-white space-y-4 shadow-3xs">
+                  <div className="border-b pb-3">
+                    <h3 className="font-extrabold text-sm text-[#081621] uppercase tracking-wider">Leave a Digital Site Inquiry</h3>
+                    <p className="text-xs text-gray-500 mt-1 font-semibold">Submit your rod and cement estimate; our administrative desks will answer with custom rate calculations.</p>
+                  </div>
+                  
+                  <form onSubmit={(e) => { e.preventDefault(); alert("Inquiry submitted successfully! Our representative will call you back within 15 minutes."); }} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wide text-gray-500 mb-1">Company / Your Name *</label>
+                      <input required type="text" placeholder="e.g., Sanajidul Tamim" className="w-full border rounded p-2 text-xs font-semibold outline-none focus:border-[#ef4a23]" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-extrabold uppercase tracking-wide text-gray-500 mb-1">Mobile Contact Phone *</label>
+                      <input required type="tel" placeholder="e.g., 01988030534" className="w-full border rounded p-2 text-xs font-mono outline-none focus:border-[#ef4a23]" />
+                    </div>
+                    <div className="sm:col-span-2">
+                       <label className="block text-[10px] font-extrabold uppercase tracking-wide text-gray-500 mb-1">Message / Materials Calculation Details *</label>
+                       <textarea required rows={4} placeholder="e.g. Need 4 tons of 16mm BSRM Rod and 150 bags of Seven Rings Cement delivered to Sadar site..." className="w-full border border-gray-200 rounded p-2 text-xs font-semibold outline-none focus:border-[#ef4a23]"></textarea>
+                    </div>
+                    <div className="sm:col-span-2 flex justify-end">
+                      <button type="submit" className="bg-[#ef4a23] hover:bg-[#d83c17] text-white text-xs font-black uppercase tracking-wider py-2.5 px-6 rounded-md shadow-sm cursor-pointer transition-colors">
+                        Send Site Inquiry
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          ) : currentTab === 'about' ? (
+            /* SWITCH CASE 6: ABOUT US PROPRIETOR VIEW */
+            <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden text-left font-sans animate-in fade-in slide-in-from-top-4 duration-305">
+              <div className="bg-[#081621] text-white p-6 md:p-8 relative overflow-hidden border-b-4 border-[#ef4a23]">
+                <div className="absolute top-0 right-0 opacity-10 translate-x-12 -translate-y-12 select-none pointer-events-none">
+                  <User size={240} className="text-white" />
+                </div>
+                <div className="relative z-10 max-w-xl space-y-2">
+                  <span className="bg-[#ef4a23] text-white font-black text-[9px] uppercase tracking-widest px-2.5 py-1 rounded">Heritage Since 1996</span>
+                  <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight">About Hasina Traders</h1>
+                  <p className="text-gray-300 text-xs sm:text-sm leading-relaxed font-semibold">
+                    Connecting premium building manufacturing plants to local commercial foundations with uncompromised logistics.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 md:p-10 space-y-10">
+                <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+                  <div className="w-full md:w-1/3 shrink-0">
+                    <div className="border-4 border-gray-100 rounded-2xl overflow-hidden shadow-md bg-white">
+                      <img 
+                        src={aboutUsPhotoUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=600"} 
+                        alt="Proprietor of Hasina Traders" 
+                        className="w-full aspect-[4/5] object-cover h-auto"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                    <p className="text-center text-[10px] text-gray-400 font-extrabold uppercase tracking-wider mt-2.5 font-sans">
+                      PROP. BABLU MATUBBOR
+                    </p>
+                  </div>
+
+                  <div className="flex-1 space-y-4">
+                    <h2 className="text-xl sm:text-2xl font-black text-[#081621] uppercase tracking-tight border-b pb-2 font-sans">
+                      {aboutUsTitle || "Our Proprietor Bablu Matubbor"}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-gray-705 leading-relaxed font-semibold whitespace-pre-line">
+                      {aboutUsText || "M/S Hasina Traders has been a pioneer in building construction supplies and structural materials since 1996 in Gopalganj, Faridpur, and surrounding districts. Focused on reliability, premium quality standards, and on-site delivery networks."}
+                    </p>
+                     <div className="bg-gray-50 border border-gray-150 rounded-xl p-4 mt-6">
+                      <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider mb-2 font-sans">Our Quality Guarantee</h4>
+                      <p className="text-[11px] text-gray-500 leading-normal font-semibold">
+                        Every single delivery from our shipyard is certified of standard weight, mill-certified grade, and is fully approved of strength parameters. We reject sub-standard products at our shipyard so that your building remains secure for decades.
+                      </p>
+                    </div>
+
+                    {/* Dynamic Social Links inside the About Us view */}
+                    {(facebookUrl || youtubeUrl || otherUrl) && (
+                      <div className="mt-6 pt-5 border-t border-gray-150">
+                        <h4 className="text-xs font-black text-gray-800 uppercase tracking-widest mb-3 font-sans">Connecting via Social Platforms</h4>
+                        <div className="flex flex-wrap gap-3">
+                          {facebookUrl && (
+                            <a 
+                              href={facebookUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="flex items-center gap-1.5 bg-[#1877f2]/5 border border-[#1877f2]/15 hover:border-[#1877f2]/30 hover:bg-[#1877f2]/10 text-[#1877f2] font-semibold text-[11px] uppercase px-3.5 py-2 rounded-lg transition-all"
+                            >
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
+                              </svg>
+                              Official Facebook Page
+                            </a>
+                          )}
+                          {youtubeUrl && (
+                            <a 
+                              href={youtubeUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="flex items-center gap-1.5 bg-red-600/5 border border-red-650/15 hover:border-red-600/30 hover:bg-red-650/10 text-red-605 font-semibold text-[11px] uppercase px-3.5 py-2 rounded-lg transition-all"
+                            >
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M23.498 6.163c-.272-1.022-1.04-1.826-2.022-2.1c-1.78-.485-8.913-.485-8.913-.485s-7.133 0-8.912.485c-.982.274-1.75 1.078-2.021 2.1c-.48 1.83-.48 5.65-.48 5.65s0 3.82.48 5.65c.271 1.022 1.04 1.826 2.021 2.1c1.78.485 8.912.485 8.912.485s7.133 0 8.913-.485c.983-.274 1.75-1.078 2.022-2.1c.48-1.83.48-5.65.48-5.65s0-3.82-.48-5.65zm-14.27 10.33V7.5l6.59 4.5z"/>
+                              </svg>
+                              YouTube Channel
+                            </a>
+                          )}
+                          {otherUrl && (
+                            <a 
+                              href={otherUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="flex items-center gap-1.5 bg-emerald-600/5 border border-emerald-600/15 hover:border-emerald-600/30 hover:bg-emerald-600/10 text-emerald-600 font-semibold text-[11px] uppercase px-3.5 py-2 rounded-lg transition-all"
+                            >
+                              <svg className="w-3.5 h-3.5 fill-none stroke-current" strokeWidth="2.5" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="2" y1="12" x2="22" y2="12"/>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                              </svg>
+                              Official Website
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* SWITCH CASE 4: SHOP SEARCH & CATALOG (PUBLIC DISCOVERY MODULE) */
+            <div className="space-y-6 text-left">
+              {/* Elastic Search Engine */}
+              <div className="bg-[#081621] rounded-xl p-4 md:p-6 shadow-md border border-orange-500/10 flex flex-col md:flex-row items-center gap-4">
+                <div className="text-left flex-1">
+                  <h2 className="text-base md:text-lg font-black text-white uppercase tracking-wider">Search Our Catalog</h2>
+                  <p className="text-xs text-gray-400 mt-1 font-semibold">Look up rods, cement, building inputs, fittings, or brands instantly.</p>
+                </div>
+                <div className="w-full max-w-xl relative">
+                  <input 
+                    type="text" 
+                    placeholder="Search rods, cement, categories, or brands..." 
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full bg-[#112335] text-white rounded-lg py-2.5 md:py-3 px-4 pr-12 outline-none text-xs md:text-sm placeholder:text-gray-400 focus:bg-white focus:text-[#081621] focus:ring-2 focus:ring-[#ef4a23] border border-transparent transition-all"
+                  />
+                  <Search size={18} className="absolute right-4 top-2.5 md:top-3.5 text-gray-400 cursor-pointer pointer-events-none"/>
+                </div>
+              </div>
+
+              {/* Dynamic Categories Rail (Rod, Cement, Fittings etc.) wrapped neatly with no horizontal scroll scroll/swipe track */}
+              <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-3 text-left">
+                <div className="flex flex-wrap gap-1.5 md:gap-2">
+                  <button 
+                    onClick={() => { setActiveCategory('All'); }} 
+                    className={`px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                      activeCategory === 'All' 
+                        ? 'bg-[#ef4a23] text-white shadow-md' 
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    All Categories
+                  </button>
+                  {categories.map(c => (
+                    <button 
+                      key={c} 
+                      onClick={() => { setActiveCategory(c); }} 
+                      className={`px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                        activeCategory === c 
+                          ? 'bg-[#ef4a23] text-white shadow-md' 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-6">
+              {/* Left Sidebar compact responsive layout for mobile friendliness */}
+              <aside className="hidden md:block w-full md:w-64 shrink-0 space-y-4">
+                
+                {/* Category Selection List Filter Block */}
+                <div className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-gray-200">
+                   <h3 className="font-extrabold text-xs uppercase tracking-widest text-[#081621] border-b pb-2 mb-3">Categories</h3>
+                   <div className="space-y-2">
+                     <label className="flex items-center gap-2 cursor-pointer group select-none">
                        <input 
                          type="radio" 
-                         name="stock" 
-                         checked={stockFilter === s} 
-                         onChange={() => setStockFilter(s as any)} 
+                         name="cat" 
+                         checked={activeCategory === 'All'} 
+                         onChange={() => setActiveCategory('All')} 
                          className="w-4 h-4 text-[#ef4a23] focus:ring-[#ef4a23] cursor-pointer" 
                        />
-                       <span className="text-xs font-extrabold text-gray-700 group-hover:text-[#ef4a23] transition-colors">{s}</span>
+                       <span className="text-xs font-extrabold text-gray-700 group-hover:text-[#ef4a23] transition-colors">All Categories</span>
                      </label>
-                   ))}
-                 </div>
-              </div>
+                     {categories.map(c => (
+                       <label key={c} className="flex items-center gap-2 cursor-pointer group select-none">
+                         <input 
+                           type="radio" 
+                           name="cat" 
+                           checked={activeCategory === c} 
+                           onChange={() => setActiveCategory(c)} 
+                           className="w-4 h-4 text-[#ef4a23] focus:ring-[#ef4a23] cursor-pointer" 
+                         />
+                         <span className="text-xs font-extrabold text-gray-700 group-hover:text-[#ef4a23] transition-colors">{c}</span>
+                       </label>
+                     ))}
+                   </div>
+                </div>
 
-              {/* Brands Filter Block made smaller and compact */}
-              <div className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-gray-200">
-                 <h3 className="font-extrabold text-xs uppercase tracking-widest text-[#081621] border-b pb-2 mb-3">Filter By Brand</h3>
-                 <div className="space-y-2 max-h-56 overflow-y-auto no-scrollbar">
-                   <label className="flex items-center gap-2 cursor-pointer group select-none">
-                       <input 
-                         type="radio" 
-                         name="brand" 
-                         checked={activeBrand === 'All'} 
-                         onChange={() => setActiveBrand('All')} 
-                         className="text-[#ef4a23] focus:ring-[#ef4a23] w-4 h-4 cursor-pointer" 
-                       />
-                       <span className="text-xs font-extrabold text-gray-700 group-hover:text-[#ef4a23] transition-colors">All Brands</span>
-                   </label>
-                   {brands.map(b => (
-                     <label key={b} className="flex items-center gap-2 cursor-pointer group select-none">
-                       <input 
-                         type="radio" 
-                         name="brand" 
-                         checked={activeBrand === b} 
-                         onChange={() => setActiveBrand(b)} 
-                         className="text-[#ef4a23] focus:ring-[#ef4a23] w-4 h-4 cursor-pointer" 
-                       />
-                       <span className="text-xs font-extrabold text-gray-700 group-hover:text-[#ef4a23] transition-colors">{b}</span>
+                {/* Price Range Filter Block */}
+                <div className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-gray-200">
+                   <h3 className="font-extrabold text-xs uppercase tracking-widest text-[#081621] border-b pb-2 mb-3 font-sans">Price Range</h3>
+                   <input 
+                     type="range" 
+                     min={0} 
+                     max={250000} 
+                     step={500} 
+                     value={priceRange} 
+                     onChange={(e) => setPriceRange(Number(e.target.value))} 
+                     className="w-full accent-[#ef4a23] cursor-pointer" 
+                   />
+                   <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 mt-1.5 font-mono">
+                     <span>৳0</span>
+                     <span className="text-red-650 font-black text-xs font-sans">Up to ৳{priceRange.toLocaleString()}</span>
+                     <span>৳2.5L</span>
+                   </div>
+                </div>
+
+                {/* Availability Filter Block made smaller for mobile scaling */}
+                <div className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-gray-200">
+                   <h3 className="font-extrabold text-xs uppercase tracking-widest text-[#081621] border-b pb-2 mb-3">Availability</h3>
+                   <div className="space-y-2">
+                     {['All', 'In Stock', 'Pre Order', 'Upcoming'].map(s => (
+                       <label key={s} className="flex items-center gap-2 cursor-pointer group select-none">
+                         <input 
+                           type="radio" 
+                           name="stock" 
+                           checked={stockFilter === s} 
+                           onChange={() => setStockFilter(s as any)} 
+                           className="w-4 h-4 text-[#ef4a23] focus:ring-[#ef4a23] cursor-pointer" 
+                         />
+                         <span className="text-xs font-extrabold text-gray-700 group-hover:text-[#ef4a23] transition-colors">{s}</span>
+                       </label>
+                     ))}
+                   </div>
+                </div>
+
+                {/* Brands Filter Block made smaller and compact */}
+                <div className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border border-gray-200">
+                   <h3 className="font-extrabold text-xs uppercase tracking-widest text-[#081621] border-b pb-2 mb-3">Filter By Brand</h3>
+                   <div className="space-y-2 max-h-56 overflow-y-auto no-scrollbar">
+                     <label className="flex items-center gap-2 cursor-pointer group select-none">
+                         <input 
+                           type="radio" 
+                           name="brand" 
+                           checked={activeBrand === 'All'} 
+                           onChange={() => setActiveBrand('All')} 
+                           className="text-[#ef4a23] focus:ring-[#ef4a23] w-4 h-4 cursor-pointer" 
+                         />
+                         <span className="text-xs font-extrabold text-gray-700 group-hover:text-[#ef4a23] transition-colors">All Brands</span>
                      </label>
-                   ))}
-                 </div>
-              </div>
-            </aside>
+                     {brands.map(b => (
+                       <label key={b} className="flex items-center gap-2 cursor-pointer group select-none">
+                         <input 
+                           type="radio" 
+                           name="brand" 
+                           checked={activeBrand === b} 
+                           onChange={() => setActiveBrand(b)} 
+                           className="text-[#ef4a23] focus:ring-[#ef4a23] w-4 h-4 cursor-pointer" 
+                         />
+                         <span className="text-xs font-extrabold text-gray-700 group-hover:text-[#ef4a23] transition-colors">{b}</span>
+                       </label>
+                     ))}
+                   </div>
+                </div>
+              </aside>
 
-            {/* Product display ledger with details click action overlay */}
-            <div className="flex-1">
+              {/* Product display ledger with details click action overlay */}
+              <div className="flex-1">
               
                {/* MOBILE COMPACT FILTER ROW (Ultra Space Saving) */}
                <div className="md:hidden space-y-1 mb-1.5 bg-white p-2 rounded-lg border border-gray-150 shadow-2xs">
                  {/* Availability horizontal list */}
-                 <div className="flex items-center gap-1 mb-0.5">
+                <div className="flex items-start gap-1 mb-0.5">
                    <span className="text-[9px] font-black uppercase text-gray-400 shrink-0 w-11">Stock:</span>
-                   <div className="flex gap-1 overflow-x-auto no-scrollbar py-0.5">
+                   <div className="flex flex-wrap gap-1 py-0.5">
                      {['All', 'In Stock', 'Pre Order', 'Upcoming'].map(s => {
                        const isSelected = stockFilter === s;
                        return (
@@ -1101,7 +2066,7 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                         {/* Image Viewer clickable for full details details tab */}
                         <div 
                           onClick={() => { setSelectedProduct(p); setDetailsTab('specs'); }}
-                          className="w-full h-44 flex items-center justify-center overflow-hidden rounded-md bg-gray-50/50 mb-3 pt-3 mt-6 cursor-pointer relative group-hover:bg-white"
+                          className="w-full h-48 flex items-center justify-center overflow-hidden rounded-md bg-gray-50/10 p-0.5 border border-gray-100 mb-3 mt-6 cursor-pointer relative"
                         >
                            <img src={p.imageUrl} alt={p.name} className="object-contain h-full w-full group-hover:scale-105 transition-transform duration-300 referrer" referrerPolicy="no-referrer" />
                            <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -1158,12 +2123,12 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                         {/* [1st - Top] Product Image WITH Save Badge in Left Corner */}
                         <div 
                           onClick={() => { setSelectedProduct(p); setDetailsTab('specs'); }}
-                          className="w-full aspect-square flex items-center justify-center overflow-hidden rounded bg-gray-50/70 p-1.5 cursor-pointer relative mb-1.5"
+                          className="w-full aspect-square flex items-center justify-center overflow-hidden rounded bg-gray-50/10 p-0.5 border border-gray-150 cursor-pointer relative mb-1.5"
                         >
                           <img 
                             src={p.imageUrl} 
                             alt={p.name} 
-                            className="object-contain h-full w-full max-h-28 referrer" 
+                            className="object-contain h-full w-full referrer" 
                             referrerPolicy="no-referrer" 
                           />
                           {saveAmount > 0 && (
@@ -1237,7 +2202,8 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
               )}
             </div>
           </div>
-        ) : (
+          </div>
+        )) : (
           /* SWITCH CASE 4: SECURE CHECKOUT PAGE (MANDATORY AUTHORIZATION BLOCK) */
           <div className="flex-1 w-full max-w-5xl mx-auto rounded animate-in fade-in zoom-in-95 duration-200">
             <button onClick={() => setIsCheckout(false)} className="text-xs font-extrabold text-gray-500 mb-6 hover:text-[#ef4a23] flex items-center gap-1 bg-white border px-3 py-1.5 rounded shadow-2xs transition-colors max-w-[150px]">&larr; Back to Shopping</button>
@@ -1498,12 +2464,56 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
 
       {/* Footer (Pure Star Tech Style Footer) */}
       <footer className="bg-[#081621] text-gray-300 py-12 mt-auto border-t-4 border-[#ef4a23] print:hidden">
-        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-8">
            <div>
              <h2 className="text-xl font-bold text-white mb-2 leading-none flex items-center gap-1">
                মেসার্স হাসিনা ট্রেডার্স
              </h2>
              <p className="text-[#ef4a23] text-xs font-bold leading-normal">M/S Hasina Traders • Premium Building Materials and Sanitary Store</p>
+              {/* Dynamic Corporate Social Connect Links */}
+              <div className="flex flex-wrap gap-2 sm:gap-2.5 mt-4 mb-4">
+                {facebookUrl && (
+                  <a 
+                    href={facebookUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex items-center gap-1 bg-[#1877f2]/10 border border-[#1877f2]/20 hover:bg-[#1877f2]/20 hover:border-[#1877f2]/30 text-[#1877f2] font-black text-[10px] uppercase px-2.5 py-1.5 rounded-md tracking-wider transition-all"
+                  >
+                    <svg className="w-3 h-3 fill-current mr-0.5" viewBox="0 0 24 24">
+                      <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
+                    </svg>
+                    Facebook
+                  </a>
+                )}
+                {youtubeUrl && (
+                  <a 
+                    href={youtubeUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex items-center gap-1 bg-red-650/10 border border-red-600/20 hover:bg-red-650/20 hover:border-red-600/30 text-red-500 font-black text-[10px] uppercase px-2.5 py-1.5 rounded-md tracking-wider transition-all"
+                  >
+                    <svg className="w-3 h-3 fill-current mr-0.5" viewBox="0 0 24 24">
+                      <path d="M23.498 6.163c-.272-1.022-1.04-1.826-2.022-2.1c-1.78-.485-8.913-.485-8.913-.485s-7.133 0-8.912.485c-.982.274-1.75 1.078-2.021 2.1c-.48 1.83-.48 5.65-.48 5.65s0 3.82.48 5.65c.271 1.022 1.04 1.826 2.021 2.1c1.78.485 8.912.485 8.912.485s7.133 0 8.913-.485c.983-.274 1.75-1.078 2.022-2.1c.48-1.83.48-5.65.48-5.65s0-3.82-.48-5.65zm-14.27 10.33V7.5l6.59 4.5z"/>
+                    </svg>
+                    YouTube
+                  </a>
+                )}
+                {otherUrl && (
+                  <a 
+                    href={otherUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex items-center gap-1 bg-emerald-600/10 border border-emerald-600/20 hover:bg-emerald-600/20 hover:border-emerald-605/30 text-emerald-500 font-black text-[10px] uppercase px-2.5 py-1.5 rounded-md tracking-wider transition-all"
+                  >
+                    <svg className="w-3 h-3 fill-none stroke-current mr-0.5" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="2" y1="12" x2="22" y2="12"/>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                    Website
+                  </a>
+                )}
+              </div>
              <p className="text-sm text-gray-400 mt-4 leading-relaxed">
                Since 1996, we have been serving Gopalganj and Faridpur regions as a retail and wholesale dealer of high-quality construction rods, cement, sanitary materials, and modern building inputs. 
              </p>
@@ -1517,16 +2527,6 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                <li className="flex items-center gap-2"><Phone size={14} className="text-[#ef4a23]" /> +880-1996418168</li>
                <li className="flex items-center gap-2"><span className="text-xs font-bold text-[#ef4a23]">@</span> tradersmshasina@gmail.com</li>
              </ul>
-           </div>
-           <div>
-              <h3 className="font-bold text-white mb-4 uppercase tracking-wider text-xs border-b border-gray-800 pb-2">Offline & Online Dual System</h3>
-              <p className="text-xs text-gray-400 leading-relaxed pl-2 mb-4">
-                Through our modern real-time POS system, customers can receive and print official order copies, bills, or thermal receipts on-site. 
-              </p>
-              <button onClick={onOpenAdmin} className="text-[#ef4a23] hover:text-white text-xs font-extrabold flex items-center gap-1.5 transition-colors bg-white/5 py-1.5 px-3 rounded border border-white/10 uppercase">
-                 <svg size={16} className="w-4 h-4 fill-current text-[#ef4a23]" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
-                 Admin Access (Staff Entry)
-              </button>
            </div>
         </div>
       </footer>

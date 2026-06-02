@@ -4,8 +4,14 @@ export const DEFAULT_BRANDS = [
 ];
 
 export const DEFAULT_CATEGORIES = [
-  "Rod & Structural Steel", "Cement", "Electrical & Fans", 
-  "Pipes & Fittings", "Sanitaryware"
+  "Rod & Steel", 
+  "Cement", 
+  "Bricks & Blocks", 
+  "Sand & Aggregates", 
+  "Tiles & Sanitary", 
+  "Hardware Tools", 
+  "Pipes & Fittings", 
+  "Paint & Coils"
 ];
 
 export const INITIAL_PRODUCTS = [
@@ -13,7 +19,7 @@ export const INITIAL_PRODUCTS = [
     id: "prod-1",
     name: "BSRM Xtreme 500W 16mm Deformed Bar",
     brand: "BSRM",
-    category: "Rod & Structural Steel",
+    category: "Rod & Steel",
     description: "High-grade structural steel reinforcing bar, ensuring maximum safety and durability for heavy construction.",
     regularPrice: 110000,
     salePrice: 105500,

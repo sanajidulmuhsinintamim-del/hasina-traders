@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from './StoreProvider';
-import { LogOut, Package, Database, BarChart3, Plus, Tags, Trash2, Calendar, TrendingUp, Edit, Printer, ShoppingBag, Download, MessageSquare } from 'lucide-react';
+import { LogOut, Package, Database, BarChart3, Plus, Tags, Trash2, Calendar, TrendingUp, Edit, Printer, ShoppingBag, Download, MessageSquare, Grid } from 'lucide-react';
 import { OfflineSale, Product, Order } from './types';
 import { loginWithGoogle, logoutUser } from './firebase';
 import { InventoryLedger } from './components/InventoryLedger';
@@ -46,7 +46,7 @@ export const AdminLogin = ({ onOpenStore }: { onOpenStore: () => void }) => {
 
 export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
   const { offlineSales, onlineOrders } = useStore();
-  const [activeTab, setActiveTab] = useState<'POS' | 'ORDERS' | 'PRODUCTS' | 'BRANDS' | 'STATS' | 'QA_MODERATION' | 'LEDGER'>('POS');
+  const [activeTab, setActiveTab] = useState<'POS' | 'ORDERS' | 'PRODUCTS' | 'BRANDS' | 'STATS' | 'QA_MODERATION' | 'LEDGER' | 'CATEGORIES'>('POS');
   const [printData, setPrintData] = useState<{ type: 'offline', data: OfflineSale } | { type: 'online', data: Order | Order[] } | null>(null);
 
   const handleDownloadPDF = async () => {
@@ -295,8 +295,10 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
     { id: 'LEDGER', label: 'Inventory Ledger', icon: TrendingUp },
     { id: 'PRODUCTS', label: 'DB Management', icon: Package },
     { id: 'BRANDS', label: 'Brand Registry', icon: Tags },
+    { id: 'CATEGORIES', label: 'Category Registry', icon: Grid },
     { id: 'QA_MODERATION', label: 'Q&A Moderation', icon: MessageSquare },
-    { id: 'STATS', label: 'Analytics', icon: BarChart3 }
+    { id: 'STATS', label: 'Analytics', icon: BarChart3 },
+    { id: 'ABOUT_EDIT', label: 'About Page', icon: Edit }
   ] as const;
 
   return (
@@ -379,8 +381,10 @@ export const AdminPanel = ({ onOpenStore }: { onOpenStore: () => void }) => {
         {activeTab === 'LEDGER' && <InventoryLedger />}
         {activeTab === 'PRODUCTS' && <ProductManager />}
         {activeTab === 'BRANDS' && <BrandManager />}
+        {activeTab === 'CATEGORIES' && <CategoryManager />}
         {activeTab === 'QA_MODERATION' && <QaModeration />}
         {activeTab === 'STATS' && <Statistics />}
+        {activeTab === 'ABOUT_EDIT' && <AboutPageEditor />}
       </main>
 
       {/* PRINTABLE INVOICE TEMPLATE (Hidden from screen, displayed on print) */}
@@ -1928,6 +1932,40 @@ const BrandManager = () => {
   );
 };
 
+const CategoryManager = () => {
+  const { categories, addCategory, removeCategory } = useStore();
+  const [newCategory, setNewCategory] = useState('');
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if(newCategory.trim()) {
+      addCategory(newCategory.trim());
+      setNewCategory('');
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+         <h2 className="text-lg font-bold text-[#081621] flex items-center gap-2 mb-4"><Grid className="text-[#ef4a23]"/> Global Category Registry</h2>
+         <form onSubmit={handleAdd} className="flex gap-2 mb-8">
+            <input value={newCategory} onChange={e=>setNewCategory(e.target.value)} placeholder="Type new category name..." className="flex-1 border rounded p-2 outline-none focus:border-[#ef4a23] text-sm" />
+            <button type="submit" className="bg-[#081621] text-white px-6 py-2 rounded text-sm font-semibold hover:bg-gray-800">Add Category</button>
+         </form>
+
+         <div className="flex flex-wrap gap-3">
+            {categories.map(c => (
+              <div key={c} className="bg-gray-100 border border-gray-200 rounded-full px-4 py-2 flex items-center gap-3 text-sm font-medium text-gray-800">
+                {c}
+                <button onClick={() => removeCategory(c)} className="text-gray-400 hover:text-red-500"><Trash2 size={14}/></button>
+              </div>
+            ))}
+         </div>
+       </div>
+    </div>
+  );
+};
+
 const Statistics = () => {
   const { products, onlineOrders, offlineSales } = useStore();
   
@@ -2098,6 +2136,367 @@ const QaModeration = () => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+const AboutPageEditor: React.FC = () => {
+  const { 
+    aboutUsTitle, 
+    aboutUsText, 
+    aboutUsPhotoUrl, 
+    facebookUrl, 
+    youtubeUrl, 
+    otherUrl, 
+    homeOwnerPhotoUrl,
+    homeOwnerText,
+    homeOwnerTitle,
+    updateAboutUs 
+  } = useStore();
+  const [title, setTitle] = useState('');
+  const [text, setText] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [fb, setFb] = useState('');
+  const [yt, setYt] = useState('');
+  const [other, setOther] = useState('');
+  const [hOwnerTitle, setHOwnerTitle] = useState('');
+  const [hOwnerText, setHOwnerText] = useState('');
+  const [hOwnerPhotoUrl, setHOwnerPhotoUrl] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (aboutUsTitle) setTitle(aboutUsTitle);
+    if (aboutUsText) setText(aboutUsText);
+    if (aboutUsPhotoUrl) setPhotoUrl(aboutUsPhotoUrl);
+    if (facebookUrl !== undefined) setFb(facebookUrl);
+    if (youtubeUrl !== undefined) setYt(youtubeUrl);
+    if (otherUrl !== undefined) setOther(otherUrl);
+    if (homeOwnerTitle) setHOwnerTitle(homeOwnerTitle);
+    if (homeOwnerText) setHOwnerText(homeOwnerText);
+    if (homeOwnerPhotoUrl) setHOwnerPhotoUrl(homeOwnerPhotoUrl);
+  }, [aboutUsTitle, aboutUsText, aboutUsPhotoUrl, facebookUrl, youtubeUrl, otherUrl, homeOwnerTitle, homeOwnerText, homeOwnerPhotoUrl]);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        setPhotoUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleOwnerFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        setHOwnerPhotoUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setSaveSuccess(false);
+    try {
+      await updateAboutUs(title, text, photoUrl, fb, yt, other, hOwnerPhotoUrl, hOwnerText, hOwnerTitle);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err: any) {
+      alert(`Error saving: ${err.message || err}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 max-w-4xl mx-auto text-left font-sans">
+      <div className="border-b pb-4 mb-6">
+        <h2 className="text-xl font-extrabold text-[#081621] uppercase tracking-wide">
+          Manage About Us Segment
+        </h2>
+        <p className="text-sm text-gray-500 mt-1 font-semibold">
+          Customize the proprietor details, brand storytelling story, and upload Bablu Matubbor's or store's photo.
+        </p>
+      </div>
+
+      <form onSubmit={handleSave} className="space-y-6">
+        <div>
+          <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+            Section Title
+          </label>
+          <input
+            type="text"
+            required
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            className="w-full border rounded-lg p-3 outline-none focus:border-[#ef4a23] text-sm font-semibold"
+            placeholder="e.g. Proprietor Bablu Matubbor / Our Story"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+            Description Story Text
+          </label>
+          <textarea
+            required
+            rows={6}
+            value={text}
+            onChange={e => setText(e.target.value)}
+            className="w-full border rounded-lg p-3 outline-none focus:border-[#ef4a23] text-sm font-semibold"
+            placeholder="Describe the company, its establishment, values and team..."
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+                Owner/Store Photo (PC File Upload)
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-5 text-center hover:border-[#ef4a23] transition-colors relative cursor-pointer bg-gray-50/50">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <div className="space-y-1">
+                  <svg className="mx-auto h-8 w-8 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <p className="text-xs font-bold text-gray-600">Click to select photo from computer</p>
+                  <p className="text-[10px] text-gray-400 font-mono">Supports PNG, JPG, GIF up to 2MB</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+                Or Paste Image Direct URL
+              </label>
+              <input
+                type="text"
+                value={photoUrl}
+                onChange={e => setPhotoUrl(e.target.value)}
+                className="w-full border rounded-lg p-3 outline-none focus:border-[#ef4a23] text-xs font-mono"
+                placeholder="https://images.unsplash.com/photo-..."
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+              Visual Preview
+            </label>
+            <div className="border rounded-lg p-4 bg-gray-50 flex flex-col items-center justify-center min-h-[180px]">
+              {photoUrl ? (
+                <div className="space-y-2 text-center w-full">
+                  <img
+                    src={photoUrl}
+                    alt="Preview"
+                    className="max-h-36 max-w-full rounded-md object-contain border shadow-sm mx-auto bg-white"
+                    referrerPolicy="no-referrer"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPhotoUrl('')}
+                    className="text-xs text-red-500 hover:underline font-bold"
+                  >
+                    Remove Photo
+                  </button>
+                </div>
+              ) : (
+                <div className="text-gray-400 text-center space-y-1">
+                  <p className="text-xs font-bold">No Photo Selected</p>
+                  <p className="text-[10px]">Upload or paste a link to see validation</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* HOMEPAGE PROPTERIOR OWNER HIGHLIGHT SECTION EDIT */}
+        <div className="border-t pt-6 bg-slate-50/50 p-4 sm:p-5 rounded-xl border border-gray-150">
+          <h3 className="text-sm font-extrabold text-[#081621] uppercase tracking-wide mb-2 flex items-center gap-2">
+            👤 Home Page Proprietor Panel Customization
+          </h3>
+          <p className="text-xs text-gray-500 mb-6 font-semibold">
+            Customize Bablu Matubbor's title, landscape photo (on the left), and premium promotional story message displayed on the storefront's homepage layout.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+                  Owner Panel Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={hOwnerTitle}
+                  onChange={e => setHOwnerTitle(e.target.value)}
+                  className="w-full border bg-white rounded-lg p-3 outline-none focus:border-[#ef4a23] text-sm font-semibold"
+                  placeholder="e.g. মেসার্স হাসিনা ট্রেডার্স-এর চেয়ারম্যান ও প্রোপরাইটর বাবুল মাতুব্বর"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+                  Owner Message Paragraph (Mid range)
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={hOwnerText}
+                  onChange={e => setHOwnerText(e.target.value)}
+                  className="w-full border bg-white rounded-lg p-3 outline-none focus:border-[#ef4a23] text-sm font-semibold leading-relaxed"
+                  placeholder="Enter dynamic story/welcome lines from Bablu Matubbor..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+                  Proprietor Landscape Image link URL
+                </label>
+                <input
+                  type="text"
+                  value={hOwnerPhotoUrl}
+                  onChange={e => setHOwnerPhotoUrl(e.target.value)}
+                  className="w-full border bg-white rounded-lg p-3 outline-none focus:border-[#ef4a23] text-xs font-mono"
+                  placeholder="https://images.unsplash.com/photo-..."
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+                  Or Upload Direct File (Landscape format works best!)
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-[#ef4a23] transition-colors relative cursor-pointer bg-white">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleOwnerFileUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="space-y-1">
+                    <svg className="mx-auto h-6 w-6 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <p className="text-xs font-semibold text-gray-600">Click to import image file</p>
+                    <p className="text-[9px] text-gray-400 font-mono">Supports standard formats up to 2MB</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+                  Homepage Banner Image Live Preview
+                </label>
+                <div className="border rounded-lg p-3 bg-white flex flex-col items-center justify-center min-h-[120px]">
+                  {hOwnerPhotoUrl ? (
+                    <div className="space-y-2 text-center w-full">
+                      <img
+                        src={hOwnerPhotoUrl}
+                        alt="Preview Owner"
+                        className="max-h-24 max-w-full rounded-md object-cover border shadow-sm mx-auto w-full"
+                        referrerPolicy="no-referrer"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setHOwnerPhotoUrl('')}
+                        className="text-[10px] text-red-500 hover:underline font-bold"
+                      >
+                        Remove Photo
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-gray-400 text-center space-y-1">
+                      <p className="text-xs font-bold text-gray-500">Preset Placeholder Image Selected</p>
+                      <p className="text-[10px]">Will default to the professional Unsplash stock landscape template</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Corporate Social & Web Media configuration */}
+        <div className="border-t pt-6">
+          <h3 className="text-sm font-extrabold text-gray-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+            🌐 Social Dynamics & Media Integration System
+          </h3>
+          <p className="text-xs text-gray-500 mb-4 font-semibold">
+            Provide valid URLs for Facebook page, YouTube channel, and other external promotional platforms to publish on standard footer and proprietors showcase block.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+                Facebook Channel Page URL
+              </label>
+              <input
+                type="url"
+                value={fb}
+                onChange={e => setFb(e.target.value)}
+                className="w-full border rounded-lg p-2.5 outline-none focus:border-[#ef4a23] text-xs font-mono"
+                placeholder="https://facebook.com/your-identity"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+                YouTube Channel URL
+              </label>
+              <input
+                type="url"
+                value={yt}
+                onChange={e => setYt(e.target.value)}
+                className="w-full border rounded-lg p-2.5 outline-none focus:border-[#ef4a23] text-xs font-mono"
+                placeholder="https://youtube.com/@channel"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-gray-700 uppercase tracking-wider mb-2">
+                Additional Web Link / Support Link
+              </label>
+              <input
+                type="url"
+                value={other}
+                onChange={e => setOther(e.target.value)}
+                className="w-full border rounded-lg p-2.5 outline-none focus:border-[#ef4a23] text-xs font-mono"
+                placeholder="https://ms-hasina-traders.com"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end border-t pt-4 gap-4">
+          {saveSuccess && (
+            <span className="text-emerald-600 text-xs font-bold animate-pulse">
+              ✓ Successfully Saved to Firestore Database!
+            </span>
+          )}
+          <button
+            type="submit"
+            disabled={isSaving}
+            className={`cursor-pointer px-6 py-2.5 rounded-lg text-xs font-extrabold uppercase tracking-wider shadow-md text-white transition-all ${isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#ef4a23] hover:bg-orange-650'}`}
+          >
+            {isSaving ? 'Saving Changes...' : 'Save & Publish'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 };
