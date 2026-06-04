@@ -3,7 +3,7 @@ import { Product, OfflineSale, Order, Review, Qa, LedgerItem, LedgerHistory } fr
 import { DEFAULT_BRANDS, DEFAULT_CATEGORIES, INITIAL_PRODUCTS } from './data';
 import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, onSnapshot, setDoc, doc, updateDoc, deleteDoc, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
+import { collection, onSnapshot, setDoc, doc, updateDoc, deleteDoc, getDocs, query, orderBy, limit, where, getDoc } from 'firebase/firestore';
 
 interface AppState {
   isAdminAuth: boolean;
@@ -208,8 +208,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (data.units) setState(s => ({ ...s, units: data.units }));
         setState(s => ({
           ...s,
-          aboutUsTitle: data.aboutUsTitle || "Our Proprietor Bablu Matubbor",
-          aboutUsText: data.aboutUsText || "M/S Hasina Traders has been a pioneer in building construction supplies and structural materials since 1996 in Gopalganj, Faridpur, and surrounding districts. Focused on reliability, premium quality standards, and on-site delivery networks.",
+          aboutUsTitle: data.aboutUsTitle || "Our Proprietor Babul Matubbar",
+          aboutUsText: data.aboutUsText || "M/S Hasina Traders has been a pioneer in building construction supplies and structural materials since 2019 in Gopalganj, Faridpur, and surrounding districts. Focused on reliability, premium quality standards, and on-site delivery networks.",
           aboutUsPhotoUrl: data.aboutUsPhotoUrl || "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=600",
           facebookUrl: data.facebookUrl || "https://facebook.com",
           youtubeUrl: data.youtubeUrl || "https://youtube.com",
@@ -221,8 +221,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } else {
         setState(s => ({
           ...s,
-          aboutUsTitle: "Our Proprietor Bablu Matubbor",
-          aboutUsText: "M/S Hasina Traders has been a pioneer in building construction supplies and structural materials since 1996 in Gopalganj, Faridpur, and surrounding districts. Focused on reliability, premium quality standards, and on-site delivery networks.",
+          aboutUsTitle: "Our Proprietor Babul Matubbar",
+          aboutUsText: "M/S Hasina Traders has been a pioneer in building construction supplies and structural materials since 2019 in Gopalganj, Faridpur, and surrounding districts. Focused on reliability, premium quality standards, and on-site delivery networks.",
           aboutUsPhotoUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=600",
           facebookUrl: "https://facebook.com",
           youtubeUrl: "https://youtube.com",
@@ -310,7 +310,62 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.error('Seeding ledger checking error: ', err);
       }
     };
+
+    // Seeding products automatically when empty
+    const checkAndSeedProducts = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'products'));
+        if (snap.empty) {
+          console.log(`Seeding products with default initial materials catalog...`);
+          for (let i = 0; i < INITIAL_PRODUCTS.length; i++) {
+            const p = INITIAL_PRODUCTS[i];
+            const pId = p.id;
+            const { id, ...dataToSave } = p;
+            await setDoc(doc(db, 'products', pId), {
+              ...dataToSave,
+              createdAt: Date.now() - (i * 1000),
+              unit: p.category.toLowerCase().includes('steel') || p.category.toLowerCase().includes('rod') ? 'Ton' : 'Piece'
+            });
+          }
+          console.log('Products seeded successfully!');
+        }
+      } catch (err) {
+        console.error('Seeding products checking error: ', err);
+      }
+    };
+
+    // Seeding config if empty
+    const seedStoreSettings = async () => {
+      try {
+        const docRef = doc(db, 'storeSettings', 'config');
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) {
+          console.log('Seeding storeSettings config document with default variables...');
+          await setDoc(docRef, {
+            brands: DEFAULT_BRANDS,
+            categories: DEFAULT_CATEGORIES,
+            units: ['KG', 'Bag', 'Piece', 'Pft', 'Ton'],
+            aboutUsTitle: "Our Proprietor Babul Matubbar",
+            aboutUsText: "M/S Hasina Traders has been a pioneer in building construction supplies and structural materials since 2019 in Gopalganj, Faridpur, and surrounding districts. Focused on reliability, premium quality standards, and on-site delivery networks.",
+            aboutUsPhotoUrl: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=600",
+            whatsappNumber: "+8801988030534",
+            facebookUrl: "https://facebook.com",
+            youtubeUrl: "https://youtube.com",
+            otherUrl: "",
+            homeOwnerPhotoUrl: "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&q=80&w=1200",
+            homeOwnerTitle: "মেসার্স হাসিনা ট্রেডার্স-এর চেয়ারম্যান ও প্রোপরাইটর বাবুল মাতুব্বর",
+            homeOwnerText: "বিগত ৩ দশক ধরে আমরা অত্যন্ত সততা ও বিশ্বস্ততার সাথে গোপালগঞ্জ, ফরিদপুর ও পার্শ্ববর্তী অঞ্চলে বিশ্বখ্যাত রড, সেরা ব্র্যান্ডের কোয়ালিটি সিমেন্ট এবং স্যানিটারি সামগ্রী সরবরাহ করে আসছি। গুণগত মান ও ওজনে বিন্দুমাত্র ছাড় না দিয়ে দেশের উন্নয়ন কার্যক্রমে সরাসরি অংশীদার থাকাই আমাদের সর্বোচ্চ অঙ্গীকার। কাঙ্ক্ষিত সময়ে ও নিরাপদ ডেলিভারির নিশ্চয়তার মাধ্যমে আপনার কষ্টের টাকায় গড়া স্বপ্নের প্রতিটি স্থাপনা মজবুত ও দীর্ঘস্থায়ী করার লক্ষ্যে আমরা অবিরাম কাজ করে যাচ্ছি। যেকোনো নির্মাণ প্রকল্পে আমাদের পরামর্শ ও সহযোগিতার জন্য সরাসরি হটলাইনে যোগাযোগ করুন।"
+          });
+          console.log('storeSettings/config seeded successfully!');
+        }
+      } catch (e) {
+        console.error('Seeding storeSettings error: ', e);
+      }
+    };
+
     checkAndSeedLedger();
+    checkAndSeedProducts();
+    seedStoreSettings();
 
     return () => {
       unsubProducts();

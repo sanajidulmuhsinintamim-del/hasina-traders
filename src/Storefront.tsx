@@ -602,8 +602,8 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
   if (sortMethod === 'Price L-H') filtered.sort((a,b) => a.salePrice - b.salePrice);
   if (sortMethod === 'Price H-L') filtered.sort((a,b) => b.salePrice - a.salePrice);
   
-  // Display count
-  filtered = filtered.slice(0, displayCount);
+  // Display count - disabled to show all available items in catalogs
+  // filtered = filtered.slice(0, displayCount);
 
   const cartTotal = cart.reduce((acc, item) => acc + (item.product.salePrice * item.quantity), 0);
   const cartItemCount = cart.reduce((a,c) => a + c.quantity, 0);
@@ -827,270 +827,267 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
     <div className="min-h-screen bg-[#f2f4f8] flex flex-col font-sans relative text-gray-900 select-none">
       
       {/* Main Header (Pure Star Tech Style Architecture) */}
-      <header className="bg-gradient-to-r from-[#081621] via-[#0d2232] to-[#081621] text-white sticky top-0 z-30 shadow-2xl border-t-2 border-[#ef4a23] border-b border-orange-500/10 py-3.5 sm:py-5 md:py-6 select-none">
+      <header className="bg-gradient-to-r from-[#081621] via-[#0d2232] to-[#081621] text-white sticky top-0 z-30 shadow-2xl border-t-2 border-[#ef4a23] border-b border-orange-500/10 py-2 md:py-2.5 select-none">
         <div className="max-w-7xl mx-auto px-4">
           
-          {/* MOBILE RESPONSIVE LAYOUT (Double-row setup to handle small screens elegantly without any ribbon truncation) */}
-          <div className="flex md:hidden flex-col gap-2.5">
-            {/* Row 1: Brand Logo & Actions */}
-            <div className="flex flex-row items-center justify-between gap-2 flex-nowrap w-full">
-              {/* Logo / Brand Name - 100% visible on mobile, no overlapping or clipping */}
+          {/* MOBILE RESPONSIVE LAYOUT (Highly compact 1.5-row symmetry) */}
+          <div className="flex md:hidden flex-col gap-2 py-0.5">
+            {/* Row 1: Symmetrical 3-Column Grid */}
+            <div className="grid grid-cols-3 items-center w-full gap-2">
+              {/* Left Column: Compact Hotline Link */}
+              <div className="flex justify-start">
+                <a 
+                  href="tel:+8801988030534" 
+                  className="flex items-center gap-1 bg-[#ef4a23]/10 border border-[#ef4a23]/30 px-2 py-1 rounded-md hover:bg-[#ef4a23] transition-all group shrink-0"
+                  title="Call Hotline"
+                >
+                  <Phone size={11} className="text-[#ef4a23] group-hover:text-white animate-pulse" />
+                  <span className="font-mono text-[8px] font-black text-white group-hover:text-white leading-none">Hotline</span>
+                </a>
+              </div>
+
+              {/* Center Column: Perfectly Symmetrically Centered Brand Identity */}
               <div 
-                className="cursor-pointer shrink-0 flex flex-col text-left justify-center" 
+                className="cursor-pointer flex flex-col items-center justify-center text-center select-none"
                 onClick={() => { setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
               >
-                <h1 className="text-sm font-black tracking-tight text-white m-0 leading-none hover:text-[#ef4a23] transition-colors whitespace-nowrap">
+                <h1 className="text-xs sm:text-sm font-black tracking-tight text-white hover:text-[#ef4a23] transition-colors leading-none truncate w-full">
                   মেসার্স হাসিনা ট্রেডার্স
                 </h1>
                 <div className="h-1"></div>
-                <p className="text-gray-350 text-[8.5px] font-black uppercase tracking-widest leading-none">
+                <p className="text-[#ef4a23] text-[7.5px] font-black uppercase tracking-widest leading-none font-mono">
                   M/S Hasina Traders
                 </p>
               </div>
 
-              {/* Actions: Hotline, Cart, User, Admin */}
-              <div className="flex items-center gap-2 shrink-0">
-                {/* Mobile Hotline Quick Action link */}
-                <a 
-                  href="tel:+8801988030534" 
-                  className="flex items-center gap-1 bg-[#ef4a23]/20 border border-[#ef4a23]/40 px-2 py-1 rounded hover:bg-[#ef4a23] transition-all shrink-0"
-                  title="Call Hotline"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
-                  <span className="font-mono text-[9px] font-black text-white">+880-1988030534</span>
-                </a>
-
+              {/* Right Column: Elegant Compact Actions */}
+              <div className="flex items-center justify-end gap-2 shrink-0">
                 {/* Cart Icon */}
                 <button 
                   onClick={() => setIsCartOpen(true)} 
                   className="relative p-1 text-white hover:text-[#ef4a23] transition-colors shrink-0 cursor-pointer"
                   title="View Cart"
                 >
-                  <ShoppingCart size={17} />
+                  <ShoppingCart size={14} />
                   {cartItemCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-[#ef4a23] text-white text-[7.5px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1.5 -right-1.5 bg-[#ef4a23] text-white text-[7px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">
                       {cartItemCount}
                     </span>
                   )}
                 </button>
 
+                <div className="h-3 w-[1px] bg-white/10"></div>
+
                 {/* Profile Button */}
                 {currentUser ? (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button 
-                      onClick={() => { setIsProfileOpen(!isProfileOpen); setIsCheckout(false); setSelectedProduct(null); }}
-                      className={`flex items-center gap-0.5 text-[8.5px] font-black uppercase text-white hover:text-[#ef4a23] px-1.5 py-1 rounded border ${isProfileOpen ? 'border-[#ef4a23] text-[#ef4a23]' : 'border-gray-800 bg-[#112335]'} transition-all`}
-                    >
-                      <User size={11} className="text-[#ef4a23]" />
-                      <span className="max-w-[42px] truncate inline">{currentUser.displayName || 'User'}</span>
-                    </button>
-                    <button onClick={handleLogout} className="p-0.5 hover:text-red-500 text-gray-400 transition-colors shrink-0" title="Log Out">
-                      <LogOut size={12} />
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => { setIsProfileOpen(!isProfileOpen); setIsCheckout(false); setSelectedProduct(null); }}
+                    className={`flex items-center gap-0.5 text-[8px] font-black uppercase text-white hover:text-[#ef4a23] p-1 rounded-md border ${isProfileOpen ? 'border-[#ef4a23] text-[#ef4a23]' : 'border-white/5 bg-[#112335]'} transition-all`}
+                    title={currentUser.displayName || 'User'}
+                  >
+                    <User size={10} className="text-[#ef4a23]" />
+                  </button>
                 ) : (
                   <button 
                     onClick={() => { setIsAuthModalOpen(true); setAuthTab('login'); }}
-                    className="flex items-center gap-0.5 hover:text-[#ef4a23] border border-gray-800 text-[8.5px] font-black tracking-wide bg-[#112335] text-white py-1 px-1.5 rounded shadow-inner transition-colors shrink-0"
+                    className="flex items-center gap-0.5 hover:text-[#ef4a23] border border-white/5 text-[8px] font-black bg-[#112335] text-white p-1 rounded transition-colors shrink-0"
+                    title="Login"
                   >
-                    <LogIn size={11} className="text-[#ef4a23]"/>
-                    <span>Login</span>
+                    <LogIn size={10} className="text-[#ef4a23]"/>
                   </button>
                 )}
 
+                <div className="h-3 w-[1px] bg-white/10"></div>
+
                 {/* Admin Icon link */}
                 <button onClick={onOpenAdmin} className="text-gray-400 hover:text-white p-0.5 shrink-0" title="Admin Dashboard">
-                  <svg size={15} className="w-3.5 h-3.5 fill-current inline-block" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                  <svg size={12} className="w-3 h-3 fill-current inline-block" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
                 </button>
               </div>
             </div>
 
-            {/* Row 2: Full Width Navigation Tabs Ribbon */}
-            <div className="flex bg-[#0c1e2d] p-0.5 rounded-lg border border-gray-800 shadow-inner w-full flex-row">
-              <button 
-                onClick={() => { setCurrentTab('home'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
-                className={`flex-1 text-center py-1 rounded text-[9.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
-                  currentTab === 'home' && !isCheckout && !isProfileOpen && !selectedProduct
-                    ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)]' 
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                🏡 Home
-              </button>
+            {/* Row 2: Tiny Border Sleek Mobile Navigation Tabs Ribbon */}
+            <div className="flex justify-center w-full border-t border-white/5 pt-1.5 mt-0.5">
+              <div className="flex bg-[#0c1e2d] p-0.5 rounded-md border border-gray-800 shadow-inner w-full flex-row">
+                <button 
+                  onClick={() => { setCurrentTab('home'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+                  className={`flex-1 text-center py-1 rounded text-[8.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                    currentTab === 'home' && !isCheckout && !isProfileOpen && !selectedProduct
+                      ? 'bg-[#ef4a23] text-white shadow-[0_1px_2px_rgba(239,74,35,0.25)]' 
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  🏡 Home
+                </button>
 
-              <button 
-                onClick={() => { setCurrentTab('shop'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
-                className={`flex-1 text-center py-1 rounded text-[9.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
-                  currentTab === 'shop' && !isCheckout && !isProfileOpen && !selectedProduct
-                    ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)]' 
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                🛍️ Shop
-              </button>
+                <button 
+                  onClick={() => { setCurrentTab('shop'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+                  className={`flex-1 text-center py-1 rounded text-[8.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                    currentTab === 'shop' && !isCheckout && !isProfileOpen && !selectedProduct
+                      ? 'bg-[#ef4a23] text-white shadow-[0_1px_2px_rgba(239,74,35,0.25)]' 
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  🛍️ Shop
+                </button>
 
-              <button 
-                onClick={() => { setCurrentTab('contact'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
-                className={`flex-1 text-center py-1 rounded text-[9.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
-                  currentTab === 'contact' && !isCheckout && !isProfileOpen && !selectedProduct
-                    ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)]' 
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                📞 Contact
-              </button>
+                <button 
+                  onClick={() => { setCurrentTab('contact'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+                  className={`flex-1 text-center py-1 rounded text-[8.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                    currentTab === 'contact' && !isCheckout && !isProfileOpen && !selectedProduct
+                      ? 'bg-[#ef4a23] text-white shadow-[0_1px_2px_rgba(239,74,35,0.25)]' 
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  📞 Contact
+                </button>
 
-              <button 
-                onClick={() => { setCurrentTab('about'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
-                className={`flex-1 text-center py-1 rounded text-[9.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
-                  currentTab === 'about' && !isCheckout && !isProfileOpen && !selectedProduct
-                    ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)]' 
-                    : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                ℹ️ About Us
-              </button>
+                <button 
+                  onClick={() => { setCurrentTab('about'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+                  className={`flex-1 text-center py-1 rounded text-[8.5px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                    currentTab === 'about' && !isCheckout && !isProfileOpen && !selectedProduct
+                      ? 'bg-[#ef4a23] text-white shadow-[0_1px_2px_rgba(239,74,35,0.25)]' 
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  ℹ️ About Us
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* DESKTOP LAYOUT (Perfect single-row design retained for large screens - "desktop okay ase") */}
-          <div className="hidden md:flex flex-row items-center justify-between gap-4 flex-nowrap w-full">
+          {/* DESKTOP LAYOUT (Master-Class Golden-Ratio Symmetrical 1.5-Row Header) */}
+          <div className="hidden md:flex flex-col gap-2.5 w-full">
             
-            {/* Logo, Brand Identity, & Navigation Tabs next to it */}
-            <div className="flex flex-row items-center gap-5 md:gap-8 shrink-0">
-               <div className="cursor-pointer shrink-0 flex flex-col justify-center" onClick={() => { setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}>
-                  <h1 className="text-base sm:text-lg md:text-2xl font-black tracking-tight text-white m-0 leading-none hover:text-[#ef4a23] transition-colors whitespace-nowrap">
+            {/* Row 1: Perfect Symmetrical 3-Column Grid */}
+            <div className="grid grid-cols-3 items-center w-full gap-4 font-sans">
+               {/* Column 1 (Left): Premium Glowing Compact Hotline Display */}
+               <div className="flex justify-start">
+                  <div className="flex items-center gap-2.5 bg-[#ef4a23]/10 border border-[#ef4a23]/30 px-3 py-1 rounded-lg shadow-inner shrink-0 hover:border-[#ef4a23]/50 transition-all">
+                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                     <div className="flex flex-col text-left">
+                       <span className="text-[7.5px] uppercase font-black tracking-widest text-[#ef4a23] leading-none">Building Materials Hotline</span>
+                       <a href="tel:+8801988030534" className="font-mono text-xs font-black text-white hover:text-[#ef4a23] mt-0.5 transition-colors leading-none font-sans">
+                         +880-1988030534
+                       </a>
+                     </div>
+                  </div>
+               </div>
+
+               {/* Column 2 (Center): Prominent Brand Identity with Symmetrical Centering */}
+               <div 
+                 className="cursor-pointer flex flex-col items-center justify-center text-center select-none transform hover:scale-[1.01] transition-transform duration-200" 
+                 onClick={() => { setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+               >
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-white m-0 leading-none hover:text-[#ef4a23] transition-colors whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">
                     মেসার্স হাসিনা ট্রেডার্স
                   </h1>
-                  <div className="h-1.5 sm:h-2"></div>
-                  <p className="text-gray-300 text-[10px] md:text-xs font-black uppercase tracking-widest leading-none">
+                  <div className="h-1.5"></div>
+                  <p className="text-[#ef4a23] text-[9px] font-black uppercase tracking-[0.2em] leading-none font-mono">
                     M/S Hasina Traders
                   </p>
                </div>
 
-               {/* Header Navigation Menu right next to the Brand name with no overflow scroll or swipe system */}
-               <div className="flex bg-[#0c1e2d] p-0.5 rounded-lg border border-gray-800 shadow-inner flex-nowrap">
-                 <button 
-                   onClick={() => { 
-                     setCurrentTab('home'); 
-                     setIsCheckout(false); 
-                     setIsProfileOpen(false); 
-                     setSelectedProduct(null); 
-                   }}
-                   className={`flex items-center gap-1 px-3 py-1 rounded text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
-                     currentTab === 'home' && !isCheckout && !isProfileOpen && !selectedProduct
-                       ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
-                       : 'text-gray-400 hover:text-white hover:bg-white/5'
-                   }`}
-                 >
-                   🏡 Home
-                 </button>
+               {/* Column 3 (Right): Balanced Premium Actions Block */}
+               <div className="flex justify-end">
+                  <div className="flex items-center gap-3.5 bg-[#0c1e2d] py-1 px-3 rounded-lg border border-gray-800 shadow-inner">
+                     {/* Cart Flow Action */}
+                     <button 
+                       onClick={() => setIsCartOpen(true)} 
+                       className="relative p-1 text-white hover:text-[#ef4a23] transition-colors shrink-0 cursor-pointer"
+                       title="View Cart"
+                     >
+                       <ShoppingCart size={15} />
+                       {cartItemCount > 0 && (
+                         <span className="absolute -top-1.5 -right-1.5 bg-[#ef4a23] text-white text-[7.5px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                           {cartItemCount}
+                         </span>
+                       )}
+                     </button>
 
-                 <button 
-                   onClick={() => { 
-                     setCurrentTab('shop'); 
-                     setIsCheckout(false); 
-                     setIsProfileOpen(false); 
-                     setSelectedProduct(null); 
-                   }}
-                   className={`flex items-center gap-1 px-3 py-1 rounded text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
-                     currentTab === 'shop' && !isCheckout && !isProfileOpen && !selectedProduct
-                       ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
-                       : 'text-gray-400 hover:text-white hover:bg-white/5'
-                   }`}
-                 >
-                   🛍️ Shop
-                 </button>
+                     <div className="h-3.5 w-[1px] bg-white/10"></div>
 
-                 <button 
-                   onClick={() => { 
-                     setCurrentTab('contact'); 
-                     setIsCheckout(false); 
-                     setIsProfileOpen(false); 
-                     setSelectedProduct(null); 
-                   }}
-                   className={`flex items-center gap-1 px-3 py-1 rounded text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
-                     currentTab === 'contact' && !isCheckout && !isProfileOpen && !selectedProduct
-                       ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
-                       : 'text-gray-400 hover:text-white hover:bg-white/5'
-                   }`}
-                 >
-                   📞 Contact
-                 </button>
+                     {/* Profile Dashboard flow */}
+                     {currentUser ? (
+                       <div className="flex items-center gap-1.5 shrink-0">
+                         <button 
+                           onClick={() => { setIsProfileOpen(!isProfileOpen); setIsCheckout(false); setSelectedProduct(null); }}
+                           className={`flex items-center gap-1 text-[10px] font-black uppercase text-white hover:text-[#ef4a23] px-1.5 py-0.5 rounded border ${isProfileOpen ? 'border-[#ef4a23] text-[#ef4a23]' : 'border-gray-800 bg-[#112335]'} transition-all`}
+                         >
+                           <User size={11} className="text-[#ef4a23]" />
+                           <span className="max-w-[70px] truncate hidden xl:inline">{currentUser.displayName || 'User'}</span>
+                         </button>
+                         <button onClick={handleLogout} className="p-0.5 hover:text-red-500 text-gray-400 transition-colors shrink-0" title="Log Out">
+                           <LogOut size={11} />
+                         </button>
+                       </div>
+                     ) : (
+                       <button 
+                         onClick={() => { setIsAuthModalOpen(true); setAuthTab('login'); }}
+                         className="flex items-center gap-1 hover:text-[#ef4a23] border border-gray-800 text-[10px] font-black tracking-wide bg-[#112335] text-white py-1 px-2.5 rounded shadow-inner transition-colors shrink-0"
+                       >
+                         <LogIn size={11} className="text-[#ef4a23]"/>
+                         <span>Login</span>
+                       </button>
+                     )}
 
-                 <button 
-                   onClick={() => { 
-                     setCurrentTab('about'); 
-                     setIsCheckout(false); 
-                     setIsProfileOpen(false); 
-                     setSelectedProduct(null); 
-                   }}
-                   className={`flex items-center gap-1 px-3 py-1 rounded text-[10px] md:text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer select-none shrink-0 ${
-                     currentTab === 'about' && !isCheckout && !isProfileOpen && !selectedProduct
-                       ? 'bg-[#ef4a23] text-white shadow-[0_2px_4px_rgba(239,74,35,0.25)] font-black' 
-                       : 'text-gray-400 hover:text-white hover:bg-white/5'
-                   }`}
-                 >
-                   ℹ️ About Us
-                 </button>
+                     <div className="h-3.5 w-[1px] bg-white/10"></div>
+
+                     {/* Secure Admin Portal Link */}
+                     <button onClick={onOpenAdmin} className="text-gray-400 hover:text-[#ef4a23] p-0.5 shrink-0 transition-colors" title="Admin Dashboard">
+                       <svg size={14} className="w-3.5 h-3.5 fill-current inline-block" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+                     </button>
+                  </div>
                </div>
             </div>
 
-            {/* Premium Glowing Hotline Display - Integrated in the same single line */}
-            <div className="hidden lg:flex items-center gap-2 bg-[#ef4a23]/10 border border-[#ef4a23]/30 px-3 py-1.5 rounded-lg shadow-inner shrink-0">
-               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-               <div className="flex flex-col text-left">
-                 <span className="text-[8px] uppercase font-black tracking-widest text-[#ef4a23] leading-none">Building Materials Hotline</span>
-                 <a href="tel:+8801988030534" className="font-mono text-xs font-black text-white hover:text-[#ef4a23] mt-1 transition-colors leading-none">
-                   +880-1988030534
-                 </a>
+            {/* Row 2: Magnificent Symmetrically Centered Sleek Ribbon (Tiny Border) */}
+            <div className="flex justify-center w-full border-t border-white/5 pt-1.5">
+               <div className="flex bg-[#0c1e2d] p-0.5 rounded-lg border border-gray-850 shadow-2xl w-full max-w-sm justify-around items-center">
+                  <button 
+                    onClick={() => { setCurrentTab('home'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+                    className={`flex-1 text-center py-1 rounded text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                      currentTab === 'home' && !isCheckout && !isProfileOpen && !selectedProduct
+                        ? 'bg-[#ef4a23] text-white shadow-[0_1px_2px_rgba(239,74,35,0.25)]' 
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    🏡 Home
+                  </button>
+
+                  <button 
+                    onClick={() => { setCurrentTab('shop'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+                    className={`flex-1 text-center py-1 rounded text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                      currentTab === 'shop' && !isCheckout && !isProfileOpen && !selectedProduct
+                        ? 'bg-[#ef4a23] text-white shadow-[0_1px_2px_rgba(239,74,35,0.25)]' 
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    🛍️ Shop
+                  </button>
+
+                  <button 
+                    onClick={() => { setCurrentTab('contact'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+                    className={`flex-1 text-center py-1 rounded text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                      currentTab === 'contact' && !isCheckout && !isProfileOpen && !selectedProduct
+                        ? 'bg-[#ef4a23] text-white shadow-[0_1px_2px_rgba(239,74,35,0.25)]' 
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    📞 Contact
+                  </button>
+
+                  <button 
+                    onClick={() => { setCurrentTab('about'); setIsCheckout(false); setIsProfileOpen(false); setSelectedProduct(null); }}
+                    className={`flex-1 text-center py-1 rounded text-[10px] font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                      currentTab === 'about' && !isCheckout && !isProfileOpen && !selectedProduct
+                        ? 'bg-[#ef4a23] text-white shadow-[0_1px_2px_rgba(239,74,35,0.25)]' 
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    ℹ️ About Us
+                  </button>
                </div>
-            </div>
-
-            {/* Quick Actions (Cart, Profile, Admin) inline with no Google Auth Badge */}
-            <div className="flex items-center gap-4 shrink-0">
-               {/* Cart Flow Action */}
-               <button 
-                 onClick={() => setIsCartOpen(true)} 
-                 className="relative p-1.5 text-white hover:text-[#ef4a23] transition-colors shrink-0 cursor-pointer"
-                 title="View Cart"
-               >
-                 <ShoppingCart size={18} />
-                 {cartItemCount > 0 && (
-                   <span className="absolute -top-1 -right-1 bg-[#ef4a23] text-white text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-                     {cartItemCount}
-                   </span>
-                 )}
-               </button>
-
-               {/* Profile Dashboard flow */}
-               {currentUser ? (
-                 <div className="flex items-center gap-2 shrink-0">
-                   <button 
-                     onClick={() => { setIsProfileOpen(!isProfileOpen); setIsCheckout(false); setSelectedProduct(null); }}
-                     className={`flex items-center gap-1 text-xs font-black uppercase text-white hover:text-[#ef4a23] px-1.5 py-1 rounded border ${isProfileOpen ? 'border-[#ef4a23] text-[#ef4a23]' : 'border-gray-800 bg-[#112335]'} transition-all`}
-                   >
-                     <User size={13} className="text-[#ef4a23]" />
-                     <span className="max-w-[80px] truncate hidden xs:inline">{currentUser.displayName || 'User'}</span>
-                   </button>
-                   <button onClick={handleLogout} className="p-1 hover:text-red-500 text-gray-400 transition-colors shrink-0" title="Log Out">
-                     <LogOut size={14} />
-                   </button>
-                 </div>
-               ) : (
-                 <button 
-                   onClick={() => { setIsAuthModalOpen(true); setAuthTab('login'); }}
-                   className="flex items-center gap-1 hover:text-[#ef4a23] border border-gray-850 text-xs font-black tracking-wide bg-[#112335] text-white py-1.5 px-3 rounded shadow-inner transition-colors shrink-0"
-                 >
-                   <LogIn size={13} className="text-[#ef4a23]"/>
-                   <span className="hidden xs:inline">Login</span>
-                 </button>
-               )}
-
-               {/* Secure Admin Portal Link */}
-               <button onClick={onOpenAdmin} className="text-gray-400 hover:text-white p-1 shrink-0" title="Admin Dashboard">
-                 <svg size={16} className="w-4 h-4 fill-current inline-block" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
-               </button>
             </div>
 
           </div>
@@ -1607,7 +1604,7 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                   </h2>
                 </div>
 
-                {/* 2 Parallel Infinite Glide Loops with Shuffled Sequences both scrolling in the same direction */}
+                {/* 2 Parallel Infinite Glide Loops with Shuffled Sequences both sliding leftwards continuously */}
                 <div className="space-y-3 relative select-text font-sans">
                   
                   {/* Row 1 - Seed 101 - Slides Left (Positive medium-fast speed) */}
@@ -1623,7 +1620,7 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                     />
                   </div>
 
-                  {/* Row 2 - Seed 202 - Slides Left (Positive medium-fast speed - same direction!) */}
+                  {/* Row 2 - Seed 202 - Slides Left (Positive medium-fast speed - vice versa shuffle!) */}
                   <div>
                     <MeshProductSliderRow 
                       products={products} 
@@ -1655,7 +1652,7 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                       {/* Floating badge inside the portrait container */}
                       <div className="absolute bottom-4 left-4 sm:bottom-5 sm:left-5 z-10">
                         <span className="bg-[#ef4a23] text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded shadow-md border border-[#ef4a23]/30">
-                          Reliable Leader Since 1996
+                          Reliable Leader Since 2019
                         </span>
                       </div>
                     </div>
@@ -1730,7 +1727,7 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                   <span className="bg-[#ef4a23] text-white font-black text-[9px] uppercase tracking-widest px-2.5 py-1 rounded">24/7 Hotline Support</span>
                   <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight">Contact & Address Details</h1>
                   <p className="text-gray-300 text-xs sm:text-sm leading-relaxed font-semibold">
-                    Have bulk requirements or custom construction site requests? Get in touch with our representative or Bablu Matubbor directly.
+                    Have bulk requirements or custom construction site requests? Get in touch with our representative or Babul Matubbar directly.
                   </p>
                 </div>
               </div>
@@ -1764,7 +1761,7 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                         <span className="bg-orange-50 text-[#ef4a23] font-bold text-[9px] uppercase px-1.5 py-0.5 rounded border border-orange-100 shrink-0 mt-0.5">Primary</span>
                         <div>
                           <p className="text-sm font-black text-gray-800 font-mono">+880-1988030534</p>
-                          <p className="text-[10px] text-gray-400 font-semibold font-sans">Proprietor: Bablu Matubbor</p>
+                          <p className="text-[10px] text-gray-400 font-semibold font-sans">Proprietor: Babul Matubbar</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-2.5">
@@ -1820,7 +1817,7 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                   <User size={240} className="text-white" />
                 </div>
                 <div className="relative z-10 max-w-xl space-y-2">
-                  <span className="bg-[#ef4a23] text-white font-black text-[9px] uppercase tracking-widest px-2.5 py-1 rounded">Heritage Since 1996</span>
+                  <span className="bg-[#ef4a23] text-white font-black text-[9px] uppercase tracking-widest px-2.5 py-1 rounded">Heritage Since 2019</span>
                   <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight">About Hasina Traders</h1>
                   <p className="text-gray-300 text-xs sm:text-sm leading-relaxed font-semibold">
                     Connecting premium building manufacturing plants to local commercial foundations with uncompromised logistics.
@@ -1840,16 +1837,16 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                       />
                     </div>
                     <p className="text-center text-[10px] text-gray-400 font-extrabold uppercase tracking-wider mt-2.5 font-sans">
-                      PROP. BABLU MATUBBOR
+                      PROP. BABUL MATUBBAR
                     </p>
                   </div>
 
                   <div className="flex-1 space-y-4">
                     <h2 className="text-xl sm:text-2xl font-black text-[#081621] uppercase tracking-tight border-b pb-2 font-sans">
-                      {aboutUsTitle || "Our Proprietor Bablu Matubbor"}
+                      {aboutUsTitle || "Our Proprietor Babul Matubbar"}
                     </h2>
                     <p className="text-xs sm:text-sm text-gray-705 leading-relaxed font-semibold whitespace-pre-line">
-                      {aboutUsText || "M/S Hasina Traders has been a pioneer in building construction supplies and structural materials since 1996 in Gopalganj, Faridpur, and surrounding districts. Focused on reliability, premium quality standards, and on-site delivery networks."}
+                      {aboutUsText || "M/S Hasina Traders has been a pioneer in building construction supplies and structural materials since 2019 in Gopalganj, Faridpur, and surrounding districts. Focused on reliability, premium quality standards, and on-site delivery networks."}
                     </p>
                      <div className="bg-gray-50 border border-gray-150 rounded-xl p-4 mt-6">
                       <h4 className="text-xs font-black text-gray-800 uppercase tracking-wider mb-2 font-sans">Our Quality Guarantee</h4>
@@ -2619,14 +2616,14 @@ export const Storefront = ({ onOpenAdmin }: { onOpenAdmin: () => void }) => {
                 )}
               </div>
              <p className="text-sm text-gray-400 mt-4 leading-relaxed">
-               Since 1996, we have been serving Gopalganj and Faridpur regions as a retail and wholesale dealer of high-quality construction rods, cement, sanitary materials, and modern building inputs. 
+               Since 2019, we have been serving Gopalganj and Faridpur regions as a retail and wholesale dealer of high-quality construction rods, cement, sanitary materials, and modern building inputs. 
              </p>
            </div>
            <div>
              <h3 className="font-bold text-white mb-4 uppercase tracking-wider text-xs border-b border-gray-800 pb-2">Contact & Address</h3>
              <ul className="space-y-3 leading-normal font-semibold text-xs text-gray-400">
                <li className="flex items-center gap-2"><MapPin size={14} className="text-[#ef4a23]" /> Batikamari Bazar, Batikamari, Gopalganj</li>
-               <li className="flex items-center gap-2"><User size={14} className="text-[#ef4a23]" /> Proprietor: Bablu Matubbor</li>
+               <li className="flex items-center gap-2"><User size={14} className="text-[#ef4a23]" /> Proprietor: Babul Matubbar</li>
                <li className="flex items-center gap-2"><Phone size={14} className="text-[#ef4a23]" /> +880-1988030534</li>
                <li className="flex items-center gap-2"><Phone size={14} className="text-[#ef4a23]" /> +880-1996418168</li>
                <li className="flex items-center gap-2"><span className="text-xs font-bold text-[#ef4a23]">@</span> tradersmshasina@gmail.com</li>
